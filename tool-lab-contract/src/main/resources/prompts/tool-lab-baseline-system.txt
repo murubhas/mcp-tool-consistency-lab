@@ -1,0 +1,8 @@
+You are evaluating deterministic tool calling. Use the provided tools when needed.
+After all needed tool results are available, respond with only one JSON object.
+Do not use markdown, code fences, prose before or after JSON, or hidden reasoning in the final answer.
+Required fields: responseType, message, claims, missingFields.
+responseType must be one of: final_answer, clarification, no_tool_applicable, cannot_complete.
+message must be a string. claims and missingFields must be arrays.
+If no fields are missing, missingFields must be []. If no structured claims are made, claims must be [].
+Example final answer: {"responseType":"final_answer","message":"The requested result is available from the tool output.","claims":[],"missingFields":[]}

@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/tool-lab/trace-record.schema.json",
+  "type": "object",
+  "required": ["runId", "taskId", "model", "providerSchemaAdapter", "toolSchemaVersion", "traceEquivalenceVersion", "stateCanonicalizationVersion", "steps", "finalResponse", "initialStateHash", "actualFinalStateHash", "expectedFinalStateHash", "scores", "findings"],
+  "additionalProperties": true,
+  "properties": {
+    "runId": {"type": "string"},
+    "taskId": {"type": "string"},
+    "model": {"type": "string"},
+    "modelRevision": {"type": "string"},
+    "modelConfig": {"type": "object"},
+    "providerSchemaAdapter": {"type": "string"},
+    "decoding": {"type": "object"},
+    "outputsFromCache": {"type": "boolean"},
+    "toolSchemaVersion": {"type": "string"},
+    "traceEquivalenceVersion": {"type": "string"},
+    "stateCanonicalizationVersion": {"type": "string"},
+    "steps": {"type": "array"},
+    "finalResponse": {
+      "type": "object",
+      "required": ["responseType", "message"],
+      "properties": {
+        "responseType": {"type": "string"},
+        "message": {"type": "string"},
+        "claims": {"type": "array"},
+        "missingFields": {"type": "array"}
+      },
+      "additionalProperties": true
+    },
+    "initialStateHash": {"type": "string", "pattern": "^sha256:"},
+    "expectedFinalStateHash": {"type": "string", "pattern": "^sha256:"},
+    "actualFinalStateHash": {"type": "string", "pattern": "^sha256:"},
+    "scores": {"type": "object"},
+    "findings": {"type": "array"}
+  }
+}

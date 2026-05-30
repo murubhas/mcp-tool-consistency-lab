@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/tool-lab/accepted-traces.schema.json",
+  "type": "object",
+  "required": ["acceptedTraceVersion", "toolSchemaVersion", "traceEquivalenceVersion", "tasks"],
+  "additionalProperties": false,
+  "properties": {
+    "acceptedTraceVersion": {"type": "string"},
+    "toolSchemaVersion": {"type": "string"},
+    "traceEquivalenceVersion": {"type": "string"},
+    "tasks": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["taskId", "acceptedTraces"],
+        "additionalProperties": false,
+        "properties": {
+          "taskId": {"type": "string"},
+          "acceptedTraces": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": ["steps", "responseType"],
+              "additionalProperties": false,
+              "properties": {
+                "responseType": {"type": "string"},
+                "steps": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": ["toolCalls"],
+                    "additionalProperties": false,
+                    "properties": {
+                      "toolCalls": {
+                        "type": "array",
+                        "items": {
+                        "type": "object",
+                        "required": ["name", "arguments"],
+                        "additionalProperties": false,
+                        "properties": {
+                          "name": {"type": "string"},
+                          "arguments": {"type": "object"},
+                          "expectedErrorCode": {"type": "string"},
+                          "expectedSuccess": {"type": "boolean"}
+                        }
+                      }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

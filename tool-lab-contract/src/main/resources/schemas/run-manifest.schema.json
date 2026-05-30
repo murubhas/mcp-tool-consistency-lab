@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/tool-lab/run-manifest.schema.json",
+  "type": "object",
+  "required": [
+    "runId",
+    "createdAt",
+    "evaluatorVersion",
+    "toolSchemaVersion",
+    "toolSchemasHash",
+    "evalDatasetVersion",
+    "evalDatasetHash",
+    "acceptedTraceSetHash",
+    "model",
+    "prompt",
+    "providerSchemaAdapter",
+    "decoding",
+    "stateCanonicalizationVersion",
+    "traceEquivalenceVersion",
+    "outputsFromCache"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "runId": {"type": "string"},
+    "createdAt": {"type": "string"},
+    "gitCommitSha": {"type": "string"},
+    "evaluatorVersion": {"type": "string"},
+    "toolSchemaVersion": {"type": "string"},
+    "toolSchemasHash": {"type": "string", "pattern": "^sha256:"},
+    "evalDatasetVersion": {"type": "string"},
+    "evalDatasetHash": {"type": "string", "pattern": "^sha256:"},
+    "trainingDatasetVersion": {"type": "string"},
+    "trainingDatasetHash": {"type": "string"},
+    "acceptedTraceSetHash": {"type": "string", "pattern": "^sha256:"},
+    "model": {
+      "type": "object",
+      "required": ["modelId", "modelRevision"],
+      "additionalProperties": true,
+      "properties": {
+        "modelId": {"type": "string"},
+        "modelRevision": {"type": "string"},
+        "servingArtifactUri": {"type": "string"}
+      }
+    },
+    "prompt": {
+      "type": "object",
+      "required": ["variant", "hash", "source"],
+      "additionalProperties": false,
+      "properties": {
+        "variant": {"type": "string"},
+        "hash": {"type": "string", "pattern": "^sha256:"},
+        "source": {"type": "string"}
+      }
+    },
+    "providerSchemaAdapter": {"type": "string"},
+    "decoding": {"type": "object"},
+    "quarkusVersion": {"type": "string"},
+    "quarkusLangChain4jVersion": {"type": "string"},
+    "langChain4jVersion": {"type": "string"},
+    "vllmVersion": {"type": "string"},
+    "servingHardwareShape": {"type": "string"},
+    "bedrockModelId": {"type": "string"},
+    "bedrockRegion": {"type": "string"},
+    "stateCanonicalizationVersion": {"type": "string"},
+    "traceEquivalenceVersion": {"type": "string"},
+    "toolExecutionMode": {"enum": ["direct-domain", "mcp-http"]},
+    "randomSeed": {"type": "integer"},
+    "outputsFromCache": {"type": "boolean"}
+  }
+}

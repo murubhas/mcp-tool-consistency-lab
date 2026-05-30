@@ -1,0 +1,24 @@
+{
+  "policyId": "candidate-recommendation-v1",
+  "description": "Require per-candidate spec, fit, and price evidence before recommendation.",
+  "gatedTool": "recommend_instance",
+  "candidateArgument": "instanceType",
+  "gatedCandidateArgument": "candidateInstanceTypes",
+  "requiredEvidence": [
+    {
+      "tool": "get_instance_spec",
+      "argument": "instanceType",
+      "evidence": "spec"
+    },
+    {
+      "tool": "check_model_fit",
+      "argument": "instanceType",
+      "evidence": "fit"
+    },
+    {
+      "tool": "get_instance_price",
+      "argument": "instanceType",
+      "evidence": "price"
+    }
+  ]
+}

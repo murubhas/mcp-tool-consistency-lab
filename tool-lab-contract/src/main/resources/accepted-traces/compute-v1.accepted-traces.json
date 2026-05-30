@@ -1,0 +1,302 @@
+{
+  "acceptedTraceVersion": "compute-milestone-1-v1",
+  "toolSchemaVersion": "compute-tools-v1",
+  "traceEquivalenceVersion": "trace-eq-v1",
+  "tasks": [
+    {
+      "taskId": "compute.single.spec.001",
+      "acceptedTraces": [
+        {
+          "responseType": "final_answer",
+          "steps": [
+            {"toolCalls": [{"name": "get_instance_spec", "arguments": {"instanceType": "p5.48xlarge"}}]}
+          ]
+        }
+      ]
+    },
+    {
+      "taskId": "compute.single.price.002",
+      "acceptedTraces": [
+        {
+          "responseType": "final_answer",
+          "steps": [
+            {"toolCalls": [{"name": "get_instance_price", "arguments": {"instanceType": "g7e.2xlarge"}}]}
+          ]
+        }
+      ]
+    },
+    {
+      "taskId": "compute.single.fit.003",
+      "acceptedTraces": [
+        {
+          "responseType": "final_answer",
+          "steps": [
+            {"toolCalls": [{"name": "check_model_fit", "arguments": {"instanceType": "g6e.xlarge", "modelBillionParameters": 34, "precision": "fp8", "mode": "inference"}}]}
+          ]
+        }
+      ]
+    },
+    {
+      "taskId": "compute.single.search.004",
+      "acceptedTraces": [
+        {
+          "responseType": "final_answer",
+          "steps": [
+            {"toolCalls": [{"name": "search_instances", "arguments": {"workload": "llm_inference", "minAcceleratorMemoryGib": 90}}]}
+          ]
+        }
+      ]
+    },
+    {
+      "taskId": "compute.single.recommend.005",
+      "acceptedTraces": [
+        {
+          "responseType": "final_answer",
+          "steps": [
+            {"toolCalls": [{"name": "recommend_instance", "arguments": {"candidateInstanceTypes": ["g6e.xlarge", "g7e.2xlarge"], "modelBillionParameters": 34, "precision": "fp8", "mode": "inference", "optimizeFor": "cheapest"}}]}
+          ]
+        }
+      ]
+    },
+    {
+      "taskId": "compute.seq.search-recommend.001",
+      "acceptedTraces": [
+        {
+          "responseType": "final_answer",
+          "steps": [
+            {"toolCalls": [{"name": "search_instances", "arguments": {"workload": "fine_tuning", "minAcceleratorMemoryGib": 560, "maxMonthlyCostCents": 2000000, "requireEfa": true}}]},
+            {"toolCalls": [{"name": "recommend_instance", "arguments": {"candidateInstanceTypes": ["trn2.48xlarge"], "modelBillionParameters": 70, "precision": "bf16", "mode": "fine_tuning", "maxMonthlyCostCents": 2000000, "requireEfa": true, "optimizeFor": "cheapest"}}]}
+          ]
+        }
+      ]
+    },
+    {
+      "taskId": "compute.seq.spec-fit-price.002",
+      "acceptedTraces": [
+        {
+          "responseType": "final_answer",
+          "steps": [
+            {"toolCalls": [{"name": "get_instance_spec", "arguments": {"instanceType": "g6e.12xlarge"}}]},
+            {"toolCalls": [{"name": "check_model_fit", "arguments": {"instanceType": "g6e.12xlarge", "modelBillionParameters": 70, "precision": "bf16", "mode": "inference"}}]},
+            {"toolCalls": [{"name": "get_instance_price", "arguments": {"instanceType": "g6e.12xlarge"}}]}
+          ]
+        }
+      ]
+    },
+    {
+      "taskId": "compute.seq.search-price-recommend.003",
+      "acceptedTraces": [
+        {
+          "responseType": "final_answer",
+          "steps": [
+            {"toolCalls": [{"name": "search_instances", "arguments": {"workload": "llm_inference", "minAcceleratorMemoryGib": 160}}]},
+            {"toolCalls": [{"name": "get_instance_price", "arguments": {"instanceType": "g6e.12xlarge"}}]},
+            {"toolCalls": [{"name": "recommend_instance", "arguments": {"candidateInstanceTypes": ["g6e.12xlarge", "g7e.24xlarge", "p5.48xlarge", "p5e.48xlarge"], "modelBillionParameters": 70, "precision": "bf16", "mode": "inference", "optimizeFor": "cheapest"}}]}
+          ]
+        }
+      ]
+    },
+    {
+      "taskId": "compute.seq.p5e-fit.004",
+      "acceptedTraces": [
+        {
+          "responseType": "final_answer",
+          "steps": [
+            {"toolCalls": [{"name": "get_instance_spec", "arguments": {"instanceType": "p5e.48xlarge"}}]},
+            {"toolCalls": [{"name": "check_model_fit", "arguments": {"instanceType": "p5e.48xlarge", "modelBillionParameters": 140, "precision": "bf16", "mode": "fine_tuning"}}]},
+            {"toolCalls": [{"name": "get_instance_price", "arguments": {"instanceType": "p5e.48xlarge"}}]}
+          ]
+        }
+      ]
+    },
+    {
+      "taskId": "compute.seq.budget-bound.005",
+      "acceptedTraces": [
+        {
+          "responseType": "final_answer",
+          "steps": [
+            {"toolCalls": [{"name": "search_instances", "arguments": {"workload": "fine_tuning", "minAcceleratorMemoryGib": 560, "maxMonthlyCostCents": 2000000, "requireEfa": true}}]},
+            {"toolCalls": [{"name": "recommend_instance", "arguments": {"candidateInstanceTypes": ["trn2.48xlarge"], "modelBillionParameters": 70, "precision": "bf16", "mode": "fine_tuning", "maxMonthlyCostCents": 2000000, "requireEfa": true, "optimizeFor": "cheapest"}}]}
+          ]
+        }
+      ]
+    },
+    {
+      "taskId": "compute.parallel.specs.001",
+      "acceptedTraces": [
+        {
+          "responseType": "final_answer",
+          "steps": [
+            {"toolCalls": [
+              {"name": "get_instance_spec", "arguments": {"instanceType": "p5.48xlarge"}},
+              {"name": "get_instance_spec", "arguments": {"instanceType": "p5e.48xlarge"}}
+            ]},
+            {"toolCalls": [
+              {"name": "get_instance_price", "arguments": {"instanceType": "p5.48xlarge"}},
+              {"name": "get_instance_price", "arguments": {"instanceType": "p5e.48xlarge"}}
+            ]}
+          ]
+        }
+      ]
+    },
+    {
+      "taskId": "compute.parallel.fit.002",
+      "acceptedTraces": [
+        {
+          "responseType": "final_answer",
+          "steps": [
+            {"toolCalls": [
+              {"name": "check_model_fit", "arguments": {"instanceType": "g6e.12xlarge", "modelBillionParameters": 70, "precision": "bf16", "mode": "inference"}},
+              {"name": "check_model_fit", "arguments": {"instanceType": "g7e.24xlarge", "modelBillionParameters": 70, "precision": "bf16", "mode": "inference"}}
+            ]},
+            {"toolCalls": [{"name": "recommend_instance", "arguments": {"candidateInstanceTypes": ["g6e.12xlarge", "g7e.24xlarge"], "modelBillionParameters": 70, "precision": "bf16", "mode": "inference", "optimizeFor": "cheapest"}}]}
+          ]
+        }
+      ]
+    },
+    {
+      "taskId": "compute.parallel.price.003",
+      "acceptedTraces": [
+        {
+          "responseType": "final_answer",
+          "steps": [
+            {"toolCalls": [
+              {"name": "get_instance_price", "arguments": {"instanceType": "g6e.xlarge"}},
+              {"name": "get_instance_price", "arguments": {"instanceType": "g7e.2xlarge"}}
+            ]},
+            {"toolCalls": [{"name": "recommend_instance", "arguments": {"candidateInstanceTypes": ["g6e.xlarge", "g7e.2xlarge"], "modelBillionParameters": 34, "precision": "fp8", "mode": "inference", "optimizeFor": "cheapest"}}]}
+          ]
+        }
+      ]
+    },
+    {
+      "taskId": "compute.parallel.memory-price.004",
+      "acceptedTraces": [
+        {
+          "responseType": "final_answer",
+          "steps": [
+            {"toolCalls": [
+              {"name": "get_instance_spec", "arguments": {"instanceType": "g7e.24xlarge"}},
+              {"name": "get_instance_spec", "arguments": {"instanceType": "p5.48xlarge"}}
+            ]},
+            {"toolCalls": [
+              {"name": "get_instance_price", "arguments": {"instanceType": "g7e.24xlarge"}},
+              {"name": "get_instance_price", "arguments": {"instanceType": "p5.48xlarge"}}
+            ]}
+          ]
+        }
+      ]
+    },
+    {
+      "taskId": "compute.parallel.large-fit.005",
+      "acceptedTraces": [
+        {
+          "responseType": "final_answer",
+          "steps": [
+            {"toolCalls": [
+              {"name": "check_model_fit", "arguments": {"instanceType": "p5.48xlarge", "modelBillionParameters": 140, "precision": "bf16", "mode": "fine_tuning"}},
+              {"name": "check_model_fit", "arguments": {"instanceType": "p5e.48xlarge", "modelBillionParameters": 140, "precision": "bf16", "mode": "fine_tuning"}}
+            ]},
+            {"toolCalls": [{"name": "recommend_instance", "arguments": {"candidateInstanceTypes": ["p5.48xlarge", "p5e.48xlarge"], "modelBillionParameters": 140, "precision": "bf16", "mode": "fine_tuning", "optimizeFor": "most_memory"}}]}
+          ]
+        }
+      ]
+    },
+    {
+      "taskId": "compute.mixed-dag.fit-price-recommend.001",
+      "acceptedTraces": [
+        {
+          "responseType": "final_answer",
+          "steps": [
+            {"toolCalls": [
+              {"name": "get_instance_spec", "arguments": {"instanceType": "p5.48xlarge"}},
+              {"name": "get_instance_spec", "arguments": {"instanceType": "p5e.48xlarge"}}
+            ]},
+            {"toolCalls": [
+              {"name": "check_model_fit", "arguments": {"instanceType": "p5.48xlarge", "modelBillionParameters": 70, "precision": "bf16", "mode": "fine_tuning"}},
+              {"name": "check_model_fit", "arguments": {"instanceType": "p5e.48xlarge", "modelBillionParameters": 70, "precision": "bf16", "mode": "fine_tuning"}}
+            ]},
+            {"toolCalls": [
+              {"name": "get_instance_price", "arguments": {"instanceType": "p5.48xlarge"}},
+              {"name": "get_instance_price", "arguments": {"instanceType": "p5e.48xlarge"}}
+            ]},
+            {"toolCalls": [{"name": "recommend_instance", "arguments": {"candidateInstanceTypes": ["p5.48xlarge", "p5e.48xlarge"], "modelBillionParameters": 70, "precision": "bf16", "mode": "fine_tuning", "optimizeFor": "cheapest"}}]}
+          ]
+        }
+      ]
+    },
+    {
+      "taskId": "compute.state.budget.001",
+      "acceptedTraces": [
+        {
+          "responseType": "final_answer",
+          "steps": [
+            {"toolCalls": [{"name": "search_instances", "arguments": {"workload": "fine_tuning", "minAcceleratorMemoryGib": 560, "maxMonthlyCostCents": 2000000, "requireEfa": true}}]},
+            {"toolCalls": [{"name": "recommend_instance", "arguments": {"candidateInstanceTypes": ["trn2.48xlarge"], "modelBillionParameters": 70, "precision": "bf16", "mode": "fine_tuning", "maxMonthlyCostCents": 2000000, "requireEfa": true, "optimizeFor": "cheapest"}}]},
+            {"toolCalls": [{"name": "create_plan", "arguments": {"projectId": "proj-beta", "instanceType": "trn2.48xlarge", "modelBillionParameters": 70, "precision": "bf16", "mode": "fine_tuning", "units": 1, "idempotencyKey": "state-001"}}]},
+            {"toolCalls": [{"name": "allocate_budget", "arguments": {"planId": "plan-8470f48bccac", "projectId": "proj-beta", "idempotencyKey": "budget-001"}}]},
+            {"toolCalls": [{"name": "reserve_capacity", "arguments": {"planId": "plan-8470f48bccac", "idempotencyKey": "capacity-001"}}]},
+            {"toolCalls": [{"name": "commit_plan", "arguments": {"planId": "plan-8470f48bccac", "idempotencyKey": "commit-001"}}]}
+          ]
+        }
+      ]
+    },
+    {
+      "taskId": "compute.state.budget.002",
+      "acceptedTraces": [
+        {
+          "responseType": "final_answer",
+          "steps": [
+            {"toolCalls": [{"name": "create_plan", "arguments": {"projectId": "proj-alpha", "instanceType": "g7e.2xlarge", "modelBillionParameters": 34, "precision": "fp8", "mode": "inference", "units": 1, "idempotencyKey": "state-002"}}]},
+            {"toolCalls": [{"name": "allocate_budget", "arguments": {"planId": "plan-5e56a87af2ac", "projectId": "proj-alpha", "idempotencyKey": "budget-002"}}]},
+            {"toolCalls": [{"name": "reserve_capacity", "arguments": {"planId": "plan-5e56a87af2ac", "idempotencyKey": "capacity-002"}}]},
+            {"toolCalls": [{"name": "commit_plan", "arguments": {"planId": "plan-5e56a87af2ac", "idempotencyKey": "commit-002"}}]}
+          ]
+        }
+      ]
+    },
+    {
+      "taskId": "compute.state.budget.003",
+      "acceptedTraces": [
+        {
+          "responseType": "final_answer",
+          "steps": [
+            {"toolCalls": [{"name": "create_plan", "arguments": {"projectId": "proj-beta", "instanceType": "g6e.12xlarge", "modelBillionParameters": 70, "precision": "bf16", "mode": "inference", "units": 1, "idempotencyKey": "state-003"}}]},
+            {"toolCalls": [{"name": "allocate_budget", "arguments": {"planId": "plan-e273d0982490", "projectId": "proj-beta", "idempotencyKey": "budget-003"}}]},
+            {"toolCalls": [{"name": "reserve_capacity", "arguments": {"planId": "plan-e273d0982490", "idempotencyKey": "capacity-003"}}]},
+            {"toolCalls": [{"name": "commit_plan", "arguments": {"planId": "plan-e273d0982490", "idempotencyKey": "commit-003"}}]}
+          ]
+        }
+      ]
+    },
+    {
+      "taskId": "compute.missing.parameter.001",
+      "acceptedTraces": [
+        {
+          "responseType": "clarification",
+          "steps": []
+        }
+      ]
+    },
+    {
+      "taskId": "compute.no-tool.001",
+      "acceptedTraces": [
+        {
+          "responseType": "no_tool_applicable",
+          "steps": []
+        }
+      ]
+    },
+    {
+      "taskId": "compute.error.unknown-plan.001",
+      "acceptedTraces": [
+        {
+          "responseType": "cannot_complete",
+          "steps": [
+            {"toolCalls": [{"name": "commit_plan", "arguments": {"planId": "plan-missing", "idempotencyKey": "commit-missing"}, "expectedErrorCode": "UNKNOWN_PLAN"}]}
+          ]
+        }
+      ]
+    }
+  ]
+}

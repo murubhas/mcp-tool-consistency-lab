@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/tool-lab/training-record.schema.json",
+  "type": "object",
+  "required": ["id", "trainingSchemaVersion", "toolSchemaVersion", "source", "messages", "labels"],
+  "additionalProperties": true,
+  "properties": {
+    "id": {"type": "string"},
+    "trainingSchemaVersion": {"type": "string"},
+    "toolSchemaVersion": {"type": "string"},
+    "source": {"type": "string"},
+    "messages": {"type": "array"},
+    "labels": {"type": "object"}
+  }
+}

@@ -1,0 +1,8 @@
+target/
+*.iml
+results/
+!results/samples/
+deck/
+docs/deck-previews/
+docs/*.pptx
+~$*.pptx

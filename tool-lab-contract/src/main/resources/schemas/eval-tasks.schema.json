@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/tool-lab/eval-task.schema.json",
+  "type": "object",
+  "required": ["taskId", "templateId", "split", "domain", "category", "prompt", "initialStateProfile", "expectedResponseType", "maxSteps"],
+  "additionalProperties": false,
+  "properties": {
+    "taskId": {"type": "string", "minLength": 3},
+    "templateId": {"type": "string", "minLength": 3},
+    "split": {"type": "string", "enum": ["eval", "train"]},
+    "domain": {"type": "string", "enum": ["compute_planning"]},
+    "category": {
+      "type": "string",
+      "enum": ["single_tool", "sequential", "parallel", "mixed_dag", "state_mutation_budget", "missing_parameter", "no_tool"]
+    },
+    "prompt": {"type": "string", "minLength": 1},
+    "initialStateProfile": {"type": "string", "enum": ["default"]},
+    "expectedResponseType": {
+      "type": "string",
+      "enum": ["final_answer", "clarification", "no_tool_applicable", "cannot_complete"]
+    },
+    "maxSteps": {"type": "integer", "minimum": 1, "maximum": 12}
+  }
+}

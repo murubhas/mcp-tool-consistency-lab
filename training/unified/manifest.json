@@ -1,0 +1,27 @@
+{
+  "businessExamples": {
+    "lineCount": 1000,
+    "path": "training/business-corpus/train-all-1000.jsonl",
+    "sha256": "sha256:01ec3999cf6d37ca3fe26c3e1bf57616d123b274f3e33365db35dad4e9e7c9a5"
+  },
+  "composition": "append",
+  "datasetId": "train-all-1000-plus-toollab-no-tool-1080",
+  "generatorVersion": "all1000-plus-no-tool-envelope-v1",
+  "notes": [
+    "Preserves the 1000 business JSONL records first, then appends the 80 tool-lab no-tool rows.",
+    "Preparation only: no HyperPod/SageMaker training job has been submitted.",
+    "This unified dataset supports a clean SFT story: existing business corpus plus targeted tool-reliability examples."
+  ],
+  "toolLabNoToolExamples": {
+    "heldOutEvalPromptExcluded": "Write a short poem about cloud computing.",
+    "lineCount": 80,
+    "path": "training/no-tool-envelope/train.jsonl",
+    "sha256": "sha256:6d24b1303db0c4a47afe8ab31fd7d9489a66263ddc0381b121c8242ab4118b04",
+    "targetResponseType": "no_tool_applicable"
+  },
+  "unifiedDataset": {
+    "lineCount": 1080,
+    "path": "training/unified/train-all-1000-plus-no-tool-1080.jsonl",
+    "sha256": "sha256:5e65296b5e91e4b03b7aa374e1d5d3a99355a1dbb41f902a6c0bdd0c17391836"
+  }
+}

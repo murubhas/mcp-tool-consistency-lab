@@ -1,0 +1,86 @@
+[
+  {
+    "instanceType": "g6e.xlarge",
+    "accelerator": "L40S",
+    "acceleratorCount": 1,
+    "acceleratorMemoryGib": 48,
+    "vcpus": 4,
+    "memoryGib": 32,
+    "efaInterfaces": 0,
+    "networkGbps": 25,
+    "hourlyPriceCents": 110,
+    "workloads": ["llm_inference", "batch_gpu"]
+  },
+  {
+    "instanceType": "g6e.12xlarge",
+    "accelerator": "L40S",
+    "acceleratorCount": 4,
+    "acceleratorMemoryGib": 192,
+    "vcpus": 48,
+    "memoryGib": 384,
+    "efaInterfaces": 1,
+    "networkGbps": 100,
+    "hourlyPriceCents": 1049,
+    "workloads": ["llm_inference", "fine_tuning", "batch_gpu"]
+  },
+  {
+    "instanceType": "g7e.2xlarge",
+    "accelerator": "RTX Pro 6000 Blackwell",
+    "acceleratorCount": 1,
+    "acceleratorMemoryGib": 96,
+    "vcpus": 8,
+    "memoryGib": 64,
+    "efaInterfaces": 0,
+    "networkGbps": 50,
+    "hourlyPriceCents": 180,
+    "workloads": ["llm_inference", "batch_gpu"]
+  },
+  {
+    "instanceType": "g7e.24xlarge",
+    "accelerator": "RTX Pro 6000 Blackwell",
+    "acceleratorCount": 4,
+    "acceleratorMemoryGib": 384,
+    "vcpus": 96,
+    "memoryGib": 768,
+    "efaInterfaces": 2,
+    "networkGbps": 400,
+    "hourlyPriceCents": 1657,
+    "workloads": ["llm_inference", "fine_tuning", "batch_gpu"]
+  },
+  {
+    "instanceType": "p5.48xlarge",
+    "accelerator": "H100",
+    "acceleratorCount": 8,
+    "acceleratorMemoryGib": 640,
+    "vcpus": 192,
+    "memoryGib": 2048,
+    "efaInterfaces": 32,
+    "networkGbps": 3200,
+    "hourlyPriceCents": 9821,
+    "workloads": ["llm_inference", "fine_tuning"]
+  },
+  {
+    "instanceType": "p5e.48xlarge",
+    "accelerator": "H200",
+    "acceleratorCount": 8,
+    "acceleratorMemoryGib": 1128,
+    "vcpus": 192,
+    "memoryGib": 2048,
+    "efaInterfaces": 32,
+    "networkGbps": 3200,
+    "hourlyPriceCents": 12433,
+    "workloads": ["llm_inference", "fine_tuning"]
+  },
+  {
+    "instanceType": "trn2.48xlarge",
+    "accelerator": "Trainium2",
+    "acceleratorCount": 16,
+    "acceleratorMemoryGib": 8192,
+    "vcpus": 192,
+    "memoryGib": 2048,
+    "efaInterfaces": 16,
+    "networkGbps": 3200,
+    "hourlyPriceCents": 2180,
+    "workloads": ["fine_tuning"]
+  }
+]

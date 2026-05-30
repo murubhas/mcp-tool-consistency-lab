@@ -1,0 +1,22 @@
+{
+  "assistantRequiredFields": [
+    "responseType",
+    "message",
+    "claims",
+    "missingFields"
+  ],
+  "datasetId": "tool-lab-no-tool-envelope",
+  "format": "jsonl.dialog",
+  "generatorVersion": "no-tool-envelope-v1",
+  "heldOutEvalExclusions": [
+    "Write a short poem about cloud computing."
+  ],
+  "notes": [
+    "Preparation-only model customization candidate.",
+    "Does not include compute.no-tool.001's exact eval prompt.",
+    "Targets final assistant text envelope behavior, not tool-call token generation."
+  ],
+  "recordCount": 80,
+  "targetResponseType": "no_tool_applicable",
+  "trainSha256": "sha256:6d24b1303db0c4a47afe8ab31fd7d9489a66263ddc0381b121c8242ab4118b04"
+}

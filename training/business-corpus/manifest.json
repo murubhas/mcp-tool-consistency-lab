@@ -1,0 +1,17 @@
+{
+  "datasetId": "tool-lab-business-corpus-1000",
+  "format": "jsonl.dialog",
+  "recordCount": 1000,
+  "sha256": "01ec3999cf6d37ca3fe26c3e1bf57616d123b274f3e33365db35dad4e9e7c9a5",
+  "source": "public training corpus",
+  "governanceChecks": [
+    "email_regex",
+    "aws_account_id_12_digit",
+    "arn_prefix",
+    "local_filesystem_paths",
+    "internal_hostnames",
+    "credential_patterns",
+    "private_repo_references"
+  ],
+  "notes": "False-positive hits from public/reference content were redacted in the published copy where useful, including support-contact email strings and public pricing URLs. Remaining broad keyword hits are domain-relevant technical language such as tokens/sec and hardware internal storage descriptions. No private identifiers or credentials found."
+}

@@ -1,0 +1,143 @@
+{
+  "tasks": [
+    {"taskId":"compute.single.spec.001","outputs":[
+      {"toolCalls":[{"id":"call-1","name":"get_instance_spec","arguments":{"instanceType":"p5.48xlarge"}}]},
+      {"finalResponse":{"responseType":"final_answer","message":"p5.48xlarge specs are returned from the catalog.","claims":[]}}
+    ]},
+    {"taskId":"compute.single.price.002","outputs":[
+      {"toolCalls":[{"id":"call-1","name":"get_instance_price","arguments":{"instanceType":"g7e.2xlarge"}}]},
+      {"finalResponse":{"responseType":"final_answer","message":"g7e.2xlarge price is returned from the catalog.","claims":[]}}
+    ]},
+    {"taskId":"compute.single.fit.003","outputs":[
+      {"toolCalls":[{"id":"call-1","name":"check_model_fit","arguments":{"instanceType":"g6e.xlarge","modelBillionParameters":34,"precision":"fp8","mode":"inference"}}]},
+      {"finalResponse":{"responseType":"final_answer","message":"The fit result is returned by check_model_fit.","claims":[]}}
+    ]},
+    {"taskId":"compute.single.search.004","outputs":[
+      {"toolCalls":[{"id":"call-1","name":"search_instances","arguments":{"workload":"llm_inference","minAcceleratorMemoryGib":90}}]},
+      {"finalResponse":{"responseType":"final_answer","message":"Candidates are returned by search_instances.","claims":[]}}
+    ]},
+    {"taskId":"compute.single.recommend.005","outputs":[
+      {"toolCalls":[{"id":"call-1","name":"recommend_instance","arguments":{"candidateInstanceTypes":["g6e.xlarge","g7e.2xlarge"],"modelBillionParameters":34,"precision":"fp8","mode":"inference","optimizeFor":"cheapest"}}]},
+      {"finalResponse":{"responseType":"final_answer","message":"The cheapest fitting instance is recommended.","claims":[]}}
+    ]},
+    {"taskId":"compute.seq.search-recommend.001","outputs":[
+      {"toolCalls":[{"id":"call-1","name":"search_instances","arguments":{"workload":"fine_tuning","minAcceleratorMemoryGib":560,"maxMonthlyCostCents":2000000,"requireEfa":true}}]},
+      {"toolCalls":[{"id":"call-2","name":"recommend_instance","arguments":{"candidateInstanceTypes":["trn2.48xlarge"],"modelBillionParameters":70,"precision":"bf16","mode":"fine_tuning","maxMonthlyCostCents":2000000,"requireEfa":true,"optimizeFor":"cheapest"}}]},
+      {"finalResponse":{"responseType":"final_answer","message":"trn2.48xlarge is the cheapest valid option in the bounded candidate set.","claims":[]}}
+    ]},
+    {"taskId":"compute.seq.spec-fit-price.002","outputs":[
+      {"toolCalls":[{"id":"call-1","name":"get_instance_spec","arguments":{"instanceType":"g6e.12xlarge"}}]},
+      {"toolCalls":[{"id":"call-2","name":"check_model_fit","arguments":{"instanceType":"g6e.12xlarge","modelBillionParameters":70,"precision":"bf16","mode":"inference"}}]},
+      {"toolCalls":[{"id":"call-3","name":"get_instance_price","arguments":{"instanceType":"g6e.12xlarge"}}]},
+      {"finalResponse":{"responseType":"final_answer","message":"The answer is grounded in spec, fit, and price tool results.","claims":[]}}
+    ]},
+    {"taskId":"compute.seq.search-price-recommend.003","outputs":[
+      {"toolCalls":[{"id":"call-1","name":"search_instances","arguments":{"workload":"llm_inference","minAcceleratorMemoryGib":160}}]},
+      {"toolCalls":[{"id":"call-2","name":"get_instance_price","arguments":{"instanceType":"g6e.12xlarge"}}]},
+      {"toolCalls":[{"id":"call-3","name":"recommend_instance","arguments":{"candidateInstanceTypes":["g6e.12xlarge","g7e.24xlarge","p5.48xlarge","p5e.48xlarge"],"modelBillionParameters":70,"precision":"bf16","mode":"inference","optimizeFor":"cheapest"}}]},
+      {"finalResponse":{"responseType":"final_answer","message":"g6e.12xlarge is the cheapest fitting candidate.","claims":[]}}
+    ]},
+    {"taskId":"compute.seq.p5e-fit.004","outputs":[
+      {"toolCalls":[{"id":"call-1","name":"get_instance_spec","arguments":{"instanceType":"p5e.48xlarge"}}]},
+      {"toolCalls":[{"id":"call-2","name":"check_model_fit","arguments":{"instanceType":"p5e.48xlarge","modelBillionParameters":140,"precision":"bf16","mode":"fine_tuning"}}]},
+      {"toolCalls":[{"id":"call-3","name":"get_instance_price","arguments":{"instanceType":"p5e.48xlarge"}}]},
+      {"finalResponse":{"responseType":"final_answer","message":"p5e.48xlarge fits the 140B BF16 fine-tuning requirement.","claims":[]}}
+    ]},
+    {"taskId":"compute.seq.budget-bound.005","outputs":[
+      {"toolCalls":[{"id":"call-1","name":"search_instances","arguments":{"workload":"fine_tuning","minAcceleratorMemoryGib":560,"maxMonthlyCostCents":2000000,"requireEfa":true}}]},
+      {"toolCalls":[{"id":"call-2","name":"recommend_instance","arguments":{"candidateInstanceTypes":["trn2.48xlarge"],"modelBillionParameters":70,"precision":"bf16","mode":"fine_tuning","maxMonthlyCostCents":2000000,"requireEfa":true,"optimizeFor":"cheapest"}}]},
+      {"finalResponse":{"responseType":"final_answer","message":"The bounded search and recommendation select trn2.48xlarge.","claims":[]}}
+    ]},
+    {"taskId":"compute.parallel.specs.001","outputs":[
+      {"toolCalls":[
+        {"id":"call-1","name":"get_instance_spec","arguments":{"instanceType":"p5.48xlarge"}},
+        {"id":"call-2","name":"get_instance_spec","arguments":{"instanceType":"p5e.48xlarge"}}
+      ]},
+      {"toolCalls":[
+        {"id":"call-3","name":"get_instance_price","arguments":{"instanceType":"p5.48xlarge"}},
+        {"id":"call-4","name":"get_instance_price","arguments":{"instanceType":"p5e.48xlarge"}}
+      ]},
+      {"finalResponse":{"responseType":"final_answer","message":"The comparison uses parallel spec and price calls.","claims":[]}}
+    ]},
+    {"taskId":"compute.parallel.fit.002","outputs":[
+      {"toolCalls":[
+        {"id":"call-1","name":"check_model_fit","arguments":{"instanceType":"g6e.12xlarge","modelBillionParameters":70,"precision":"bf16","mode":"inference"}},
+        {"id":"call-2","name":"check_model_fit","arguments":{"instanceType":"g7e.24xlarge","modelBillionParameters":70,"precision":"bf16","mode":"inference"}}
+      ]},
+      {"toolCalls":[{"id":"call-3","name":"recommend_instance","arguments":{"candidateInstanceTypes":["g6e.12xlarge","g7e.24xlarge"],"modelBillionParameters":70,"precision":"bf16","mode":"inference","optimizeFor":"cheapest"}}]},
+      {"finalResponse":{"responseType":"final_answer","message":"Both candidates fit; cheapest is recommended.","claims":[]}}
+    ]},
+    {"taskId":"compute.parallel.price.003","outputs":[
+      {"toolCalls":[
+        {"id":"call-1","name":"get_instance_price","arguments":{"instanceType":"g6e.xlarge"}},
+        {"id":"call-2","name":"get_instance_price","arguments":{"instanceType":"g7e.2xlarge"}}
+      ]},
+      {"toolCalls":[{"id":"call-3","name":"recommend_instance","arguments":{"candidateInstanceTypes":["g6e.xlarge","g7e.2xlarge"],"modelBillionParameters":34,"precision":"fp8","mode":"inference","optimizeFor":"cheapest"}}]},
+      {"finalResponse":{"responseType":"final_answer","message":"The recommendation uses the price comparison and fit policy.","claims":[]}}
+    ]},
+    {"taskId":"compute.parallel.memory-price.004","outputs":[
+      {"toolCalls":[
+        {"id":"call-1","name":"get_instance_spec","arguments":{"instanceType":"g7e.24xlarge"}},
+        {"id":"call-2","name":"get_instance_spec","arguments":{"instanceType":"p5.48xlarge"}}
+      ]},
+      {"toolCalls":[
+        {"id":"call-3","name":"get_instance_price","arguments":{"instanceType":"g7e.24xlarge"}},
+        {"id":"call-4","name":"get_instance_price","arguments":{"instanceType":"p5.48xlarge"}}
+      ]},
+      {"finalResponse":{"responseType":"final_answer","message":"The answer compares memory and price from tool results.","claims":[]}}
+    ]},
+    {"taskId":"compute.parallel.large-fit.005","outputs":[
+      {"toolCalls":[
+        {"id":"call-1","name":"check_model_fit","arguments":{"instanceType":"p5.48xlarge","modelBillionParameters":140,"precision":"bf16","mode":"fine_tuning"}},
+        {"id":"call-2","name":"check_model_fit","arguments":{"instanceType":"p5e.48xlarge","modelBillionParameters":140,"precision":"bf16","mode":"fine_tuning"}}
+      ]},
+      {"toolCalls":[{"id":"call-3","name":"recommend_instance","arguments":{"candidateInstanceTypes":["p5.48xlarge","p5e.48xlarge"],"modelBillionParameters":140,"precision":"bf16","mode":"fine_tuning","optimizeFor":"most_memory"}}]},
+      {"finalResponse":{"responseType":"final_answer","message":"p5e.48xlarge is selected when optimizing for memory.","claims":[]}}
+    ]},
+    {"taskId":"compute.mixed-dag.fit-price-recommend.001","outputs":[
+      {"toolCalls":[
+        {"id":"call-1","name":"get_instance_spec","arguments":{"instanceType":"p5.48xlarge"}},
+        {"id":"call-2","name":"get_instance_spec","arguments":{"instanceType":"p5e.48xlarge"}}
+      ]},
+      {"toolCalls":[
+        {"id":"call-3","name":"check_model_fit","arguments":{"instanceType":"p5.48xlarge","modelBillionParameters":70,"precision":"bf16","mode":"fine_tuning"}},
+        {"id":"call-4","name":"check_model_fit","arguments":{"instanceType":"p5e.48xlarge","modelBillionParameters":70,"precision":"bf16","mode":"fine_tuning"}}
+      ]},
+      {"toolCalls":[
+        {"id":"call-5","name":"get_instance_price","arguments":{"instanceType":"p5.48xlarge"}},
+        {"id":"call-6","name":"get_instance_price","arguments":{"instanceType":"p5e.48xlarge"}}
+      ]},
+      {"toolCalls":[{"id":"call-7","name":"recommend_instance","arguments":{"candidateInstanceTypes":["p5.48xlarge","p5e.48xlarge"],"modelBillionParameters":70,"precision":"bf16","mode":"fine_tuning","optimizeFor":"cheapest"}}]},
+      {"finalResponse":{"responseType":"final_answer","message":"The recommendation uses specs, fit checks, and prices for both candidates.","claims":[]}}
+    ]},
+    {"taskId":"compute.state.budget.001","outputs":[
+      {"toolCalls":[{"id":"call-1","name":"search_instances","arguments":{"workload":"fine_tuning","minAcceleratorMemoryGib":560,"maxMonthlyCostCents":2000000,"requireEfa":true}}]},
+      {"toolCalls":[{"id":"call-2","name":"recommend_instance","arguments":{"candidateInstanceTypes":["trn2.48xlarge"],"modelBillionParameters":70,"precision":"bf16","mode":"fine_tuning","maxMonthlyCostCents":2000000,"requireEfa":true,"optimizeFor":"cheapest"}}]},
+      {"toolCalls":[{"id":"call-3","name":"create_plan","arguments":{"projectId":"proj-beta","instanceType":"trn2.48xlarge","modelBillionParameters":70,"precision":"bf16","mode":"fine_tuning","units":1,"idempotencyKey":"state-001"}}]},
+      {"toolCalls":[{"id":"call-4","name":"allocate_budget","arguments":{"planId":"plan-8470f48bccac","projectId":"proj-beta","idempotencyKey":"budget-001"}}]},
+      {"toolCalls":[{"id":"call-5","name":"reserve_capacity","arguments":{"planId":"plan-8470f48bccac","idempotencyKey":"capacity-001"}}]},
+      {"toolCalls":[{"id":"call-6","name":"commit_plan","arguments":{"planId":"plan-8470f48bccac","idempotencyKey":"commit-001"}}]},
+      {"finalResponse":{"responseType":"final_answer","message":"The plan was committed after budget and capacity reservations.","claims":[]}}
+    ]},
+    {"taskId":"compute.state.budget.002","outputs":[
+      {"toolCalls":[{"id":"call-1","name":"create_plan","arguments":{"projectId":"proj-alpha","instanceType":"g7e.2xlarge","modelBillionParameters":34,"precision":"fp8","mode":"inference","units":1,"idempotencyKey":"state-002"}}]},
+      {"toolCalls":[{"id":"call-2","name":"allocate_budget","arguments":{"planId":"plan-5e56a87af2ac","projectId":"proj-alpha","idempotencyKey":"budget-002"}}]},
+      {"toolCalls":[{"id":"call-3","name":"reserve_capacity","arguments":{"planId":"plan-5e56a87af2ac","idempotencyKey":"capacity-002"}}]},
+      {"toolCalls":[{"id":"call-4","name":"commit_plan","arguments":{"planId":"plan-5e56a87af2ac","idempotencyKey":"commit-002"}}]},
+      {"finalResponse":{"responseType":"final_answer","message":"The g7e.2xlarge plan was committed for proj-alpha.","claims":[]}}
+    ]},
+    {"taskId":"compute.state.budget.003","outputs":[
+      {"toolCalls":[{"id":"call-1","name":"create_plan","arguments":{"projectId":"proj-beta","instanceType":"g6e.12xlarge","modelBillionParameters":70,"precision":"bf16","mode":"inference","units":1,"idempotencyKey":"state-003"}}]},
+      {"toolCalls":[{"id":"call-2","name":"allocate_budget","arguments":{"planId":"plan-e273d0982490","projectId":"proj-beta","idempotencyKey":"budget-003"}}]},
+      {"toolCalls":[{"id":"call-3","name":"reserve_capacity","arguments":{"planId":"plan-e273d0982490","idempotencyKey":"capacity-003"}}]},
+      {"toolCalls":[{"id":"call-4","name":"commit_plan","arguments":{"planId":"plan-e273d0982490","idempotencyKey":"commit-003"}}]},
+      {"finalResponse":{"responseType":"final_answer","message":"The g6e.12xlarge plan was committed for proj-beta.","claims":[]}}
+    ]},
+    {"taskId":"compute.missing.parameter.001","outputs":[
+      {"finalResponse":{"responseType":"clarification","message":"Which instance type, model size, precision, and mode should I check?","missingFields":["instanceType","modelBillionParameters","precision","mode"],"claims":[]}}
+    ]},
+    {"taskId":"compute.no-tool.001","outputs":[
+      {"finalResponse":{"responseType":"no_tool_applicable","message":"No compute-planning tool is needed for a poem request.","claims":[]}}
+    ]}
+  ]
+}

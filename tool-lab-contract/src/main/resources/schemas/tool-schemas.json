@@ -1,0 +1,285 @@
+{
+  "toolSchemaVersion": "compute-tools-v1",
+  "tools": [
+    {
+      "name": "search_instances",
+      "description": "Find deterministic accelerated compute instance candidates by workload and constraints. Do not use for exact specs or exact price of a named instance type.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "workload": {
+            "type": "string",
+            "enum": ["llm_inference", "fine_tuning", "batch_gpu"]
+          },
+          "minAcceleratorMemoryGib": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "maxMonthlyCostCents": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "requireEfa": {
+            "type": "boolean"
+          }
+        },
+        "required": ["workload"],
+        "additionalProperties": false
+      },
+      "x-tool-lab": {
+        "sideEffects": "read_only",
+        "idempotent": true,
+        "retryPolicy": "none"
+      }
+    },
+    {
+      "name": "get_instance_spec",
+      "description": "Return deterministic specs for a known accelerated compute instance type. Use this as the only tool for exact specs of a named instance type, then answer.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "instanceType": {
+            "type": "string",
+            "enum": ["g6e.xlarge", "g6e.12xlarge", "g7e.2xlarge", "g7e.24xlarge", "p5.48xlarge", "p5e.48xlarge", "trn2.48xlarge"]
+          }
+        },
+        "required": ["instanceType"],
+        "additionalProperties": false
+      },
+      "x-tool-lab": {
+        "sideEffects": "read_only",
+        "idempotent": true,
+        "retryPolicy": "none"
+      }
+    },
+    {
+      "name": "get_instance_price",
+      "description": "Return deterministic on-demand hourly and monthly cost for a known instance type. Use only when the user explicitly asks for price, cost, budget, spend, rate, or monthly/hourly pricing; do not use for exact spec questions.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "instanceType": {
+            "type": "string",
+            "enum": ["g6e.xlarge", "g6e.12xlarge", "g7e.2xlarge", "g7e.24xlarge", "p5.48xlarge", "p5e.48xlarge", "trn2.48xlarge"]
+          },
+          "purchaseOption": {
+            "type": "string",
+            "enum": ["on_demand"],
+            "default": "on_demand"
+          }
+        },
+        "required": ["instanceType"],
+        "additionalProperties": false
+      },
+      "x-tool-lab": {
+        "sideEffects": "read_only",
+        "idempotent": true,
+        "retryPolicy": "none"
+      }
+    },
+    {
+      "name": "check_model_fit",
+      "description": "Check whether a model fits within the accelerator memory of a target instance. Use only when the user asks whether a model fits or provides model size/precision/mode; do not use for exact spec or exact price questions.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "instanceType": {
+            "type": "string",
+            "enum": ["g6e.xlarge", "g6e.12xlarge", "g7e.2xlarge", "g7e.24xlarge", "p5.48xlarge", "p5e.48xlarge", "trn2.48xlarge"]
+          },
+          "modelBillionParameters": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 500
+          },
+          "precision": {
+            "type": "string",
+            "enum": ["bf16", "fp8", "int4"]
+          },
+          "mode": {
+            "type": "string",
+            "enum": ["inference", "fine_tuning"]
+          }
+        },
+        "required": ["instanceType", "modelBillionParameters", "precision", "mode"],
+        "additionalProperties": false
+      },
+      "x-tool-lab": {
+        "sideEffects": "read_only",
+        "idempotent": true,
+        "retryPolicy": "none"
+      }
+    },
+    {
+      "name": "create_plan",
+      "description": "Create a deterministic candidate plan in the per-task state store.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "projectId": {
+            "type": "string",
+            "enum": ["proj-alpha", "proj-beta", "proj-tight"]
+          },
+          "instanceType": {
+            "type": "string",
+            "enum": ["g6e.xlarge", "g6e.12xlarge", "g7e.2xlarge", "g7e.24xlarge", "p5.48xlarge", "p5e.48xlarge", "trn2.48xlarge"]
+          },
+          "modelBillionParameters": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 500
+          },
+          "precision": {
+            "type": "string",
+            "enum": ["bf16", "fp8", "int4"]
+          },
+          "mode": {
+            "type": "string",
+            "enum": ["inference", "fine_tuning"]
+          },
+          "units": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 8
+          },
+          "idempotencyKey": {
+            "type": "string",
+            "minLength": 3
+          }
+        },
+        "required": ["projectId", "instanceType", "modelBillionParameters", "precision", "mode", "idempotencyKey"],
+        "additionalProperties": false
+      },
+      "x-tool-lab": {
+        "sideEffects": "mutating",
+        "idempotent": true,
+        "retryPolicy": "none"
+      }
+    },
+    {
+      "name": "allocate_budget",
+      "description": "Reserve project budget for an existing plan.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "planId": {
+            "type": "string",
+            "minLength": 5
+          },
+          "projectId": {
+            "type": "string",
+            "enum": ["proj-alpha", "proj-beta", "proj-tight"]
+          },
+          "idempotencyKey": {
+            "type": "string",
+            "minLength": 3
+          }
+        },
+        "required": ["planId", "projectId", "idempotencyKey"],
+        "additionalProperties": false
+      },
+      "x-tool-lab": {
+        "sideEffects": "mutating",
+        "idempotent": true,
+        "retryPolicy": "none"
+      }
+    },
+    {
+      "name": "reserve_capacity",
+      "description": "Reserve deterministic instance capacity for an existing plan.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "planId": {
+            "type": "string",
+            "minLength": 5
+          },
+          "idempotencyKey": {
+            "type": "string",
+            "minLength": 3
+          }
+        },
+        "required": ["planId", "idempotencyKey"],
+        "additionalProperties": false
+      },
+      "x-tool-lab": {
+        "sideEffects": "mutating",
+        "idempotent": true,
+        "retryPolicy": "none"
+      }
+    },
+    {
+      "name": "commit_plan",
+      "description": "Commit a plan after budget and capacity reservations are complete.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "planId": {
+            "type": "string",
+            "minLength": 5
+          },
+          "idempotencyKey": {
+            "type": "string",
+            "minLength": 3
+          }
+        },
+        "required": ["planId", "idempotencyKey"],
+        "additionalProperties": false
+      },
+      "x-tool-lab": {
+        "sideEffects": "mutating",
+        "idempotent": true,
+        "retryPolicy": "none"
+      }
+    },
+    {
+      "name": "recommend_instance",
+      "description": "Return a structured recommendation from validated candidate instances. Use only when the user asks for a recommendation, comparison, or optimization; do not use for exact spec or exact price questions.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "candidateInstanceTypes": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": ["g6e.xlarge", "g6e.12xlarge", "g7e.2xlarge", "g7e.24xlarge", "p5.48xlarge", "p5e.48xlarge", "trn2.48xlarge"]
+            },
+            "minItems": 1,
+            "uniqueItems": true
+          },
+          "modelBillionParameters": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 500
+          },
+          "precision": {
+            "type": "string",
+            "enum": ["bf16", "fp8", "int4"]
+          },
+          "mode": {
+            "type": "string",
+            "enum": ["inference", "fine_tuning"]
+          },
+          "maxMonthlyCostCents": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "requireEfa": {
+            "type": "boolean"
+          },
+          "optimizeFor": {
+            "type": "string",
+            "enum": ["cheapest", "most_memory"]
+          }
+        },
+        "required": ["candidateInstanceTypes", "modelBillionParameters", "precision", "mode", "optimizeFor"],
+        "additionalProperties": false
+      },
+      "x-tool-lab": {
+        "sideEffects": "read_only",
+        "idempotent": true,
+        "retryPolicy": "none"
+      }
+    }
+  ]
+}
