@@ -1,0 +1,2650 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark light">
+  <meta name="description" content="Making Agent Tool Calls Reliable - measure, replay, and fix tool-call failures before production.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='64' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%23ff9900'/%3E%3Cstop offset='1' stop-color='%23ff5c42'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='14' fill='url(%23g)'/%3E%3Cg transform='translate(14,14) scale(1.5)' fill='none' stroke='%230b1120' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M8 3H7a2 2 0 0 0-2 2v5a2 2 0 0 1-2 2 2 2 0 0 1 2 2v5a2 2 0 0 0 2 2h1M16 3h1a2 2 0 0 1 2 2v5a2 2 0 0 0 2 2 2 2 0 0 0-2 2v5a2 2 0 0 1-2 2h-1'/%3E%3C/g%3E%3C/svg%3E">
+  <title>Making Agent Tool Calls Reliable - Tool-Calling Consistency Lab (15 min)</title>
+  <style>
+    /* ============================================================
+       TOKENS
+       ============================================================ */
+    :root {
+      --void: #05080F;
+      --bg: #0A0F1C;
+      --bg-2: #0D1424;
+      --surf: #121A2C;
+      --surf-2: #182339;
+      --surf-3: #1F2C46;
+      --line: rgba(255, 255, 255, 0.09);
+      --line-2: rgba(255, 255, 255, 0.17);
+      --text: #F4F7FF;
+      --body: #B5C1D8;
+      --dim: #7E8CA8;
+
+      --orange: #FF9900;
+      --ember: #FFBB55;
+      --teal: #00C9E0;
+      --blue: #7290FF;
+      --purple: #AE81FF;
+      --green: #34D67F;
+      --red: #FF6047;
+      --yellow: #FFD34E;
+
+      --badge-ink: #06090F;
+      --glow-strength: 0.5;
+      --shadow-1: 0 2px 6px rgba(0, 0, 0, 0.3);
+      --shadow-2: 0 22px 60px -22px rgba(0, 0, 0, 0.75);
+
+      --header-h: 62px;
+      --nav-h: 50px;
+      --measure: 1500px;
+
+      --accent: var(--orange);
+      --accent-2: var(--ember);
+    }
+
+    html[data-theme="light"] {
+      --void: #E7ECF4;
+      --bg: #F6F8FC;
+      --bg-2: #FFFFFF;
+      --surf: #FFFFFF;
+      --surf-2: #F1F5FA;
+      --surf-3: #E6EDF6;
+      --line: rgba(12, 21, 38, 0.12);
+      --line-2: rgba(12, 21, 38, 0.24);
+      --text: #0B1426;
+      --body: #3B4963;
+      --dim: #64718B;
+
+      --orange: #A85E00;
+      --ember: #C97A05;
+      --teal: #026E82;
+      --blue: #3550CE;
+      --purple: #6A2FC4;
+      --green: #10743C;
+      --red: #AF2310;
+      --yellow: #85610A;
+
+      --badge-ink: #FFFFFF;
+      --glow-strength: 0.16;
+      --shadow-1: 0 1px 3px rgba(12, 21, 38, 0.1);
+      --shadow-2: 0 20px 46px -24px rgba(12, 21, 38, 0.32);
+    }
+
+    * { box-sizing: border-box; min-width: 0; }
+
+    html {
+      scroll-behavior: smooth;
+      background: var(--bg);
+    }
+
+    body {
+      margin: 0;
+      min-width: 320px;
+      color: var(--text);
+      background: var(--bg);
+      font-family: "Amazon Ember", "Amazon Ember Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+      font-synthesis-weight: none;
+      line-height: 1.45;
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+    }
+
+    button, a, input { font: inherit; color: inherit; }
+    a { text-decoration: none; }
+
+    :is(button, a):focus-visible {
+      outline: 2px solid var(--teal);
+      outline-offset: 3px;
+      border-radius: 4px;
+    }
+
+    h1, h2, h3, h4, p, ul { margin: 0; }
+    ul { padding: 0; list-style: none; }
+
+    .mono {
+      font-family: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 0.94em;
+      letter-spacing: -0.01em;
+    }
+
+    .sr {
+      position: absolute;
+      width: 1px; height: 1px;
+      padding: 0; margin: -1px;
+      overflow: hidden;
+      clip-path: inset(50%);
+      white-space: nowrap;
+    }
+
+    .icon-sprite { position: absolute; width: 0; height: 0; overflow: hidden; }
+
+    .icon {
+      width: 1em;
+      height: 1em;
+      display: block;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 1.9;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      flex: none;
+    }
+
+    /* ============================================================
+       CHROME - topbar, nav, progress
+       ============================================================ */
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 60;
+      height: var(--header-h);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 0 20px;
+      background: color-mix(in srgb, var(--void) 82%, transparent);
+      backdrop-filter: blur(14px) saturate(1.4);
+      border-bottom: 1px solid var(--line);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+      white-space: nowrap;
+      overflow: hidden;
+    }
+
+    /* braces echo the JSON response contract that runs through the deck;
+       the earlier corner-stroke mark read as the letter "L". */
+    .brand-mark {
+      display: grid;
+      place-items: center;
+      width: 26px;
+      height: 26px;
+      flex: none;
+      color: var(--badge-ink);
+      border-radius: 7px;
+      background: linear-gradient(150deg, var(--orange), var(--red) 130%);
+      box-shadow: 0 0 0 1px color-mix(in srgb, var(--orange) 40%, transparent),
+                  0 0 18px color-mix(in srgb, var(--orange) calc(var(--glow-strength) * 60%), transparent);
+    }
+
+    .brand-mark .icon { width: 15px; height: 15px; stroke-width: 2.6; }
+
+    .brand-text { overflow: hidden; color: var(--text); text-overflow: ellipsis; }
+
+    .toolbar { display: flex; align-items: center; gap: 7px; }
+
+    .segmented {
+      display: flex;
+      gap: 2px;
+      padding: 3px;
+      background: var(--surf);
+      border: 1px solid var(--line);
+      border-radius: 9px;
+    }
+
+    .mode-btn, .icon-btn {
+      height: 34px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      border: 0;
+      color: var(--dim);
+      background: transparent;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 700;
+      transition: color .16s ease, background .16s ease, border-color .16s ease;
+    }
+
+    .mode-btn { padding: 0 13px; }
+    .mode-btn .icon { font-size: 15px; }
+
+    .mode-btn[aria-pressed="true"] {
+      color: var(--badge-ink);
+      background: linear-gradient(140deg, var(--orange), var(--ember));
+      box-shadow: var(--shadow-1);
+    }
+
+    .icon-btn {
+      width: 36px;
+      border: 1px solid var(--line);
+      background: var(--surf);
+      font-size: 15px;
+    }
+
+    .mode-btn:hover { color: var(--text); background: var(--surf-2); }
+    .mode-btn[aria-pressed="true"]:hover { color: var(--badge-ink); }
+    .icon-btn:hover { color: var(--text); border-color: var(--line-2); background: var(--surf-2); }
+
+    .chapter-nav {
+      position: sticky;
+      top: var(--header-h);
+      z-index: 50;
+      height: var(--nav-h);
+      display: flex;
+      align-items: stretch;
+      gap: 1px;
+      padding: 0 max(18px, calc((100vw - var(--measure)) / 2));
+      overflow-x: auto;
+      overflow-y: hidden;
+      background: color-mix(in srgb, var(--void) 88%, transparent);
+      backdrop-filter: blur(14px);
+      border-bottom: 1px solid var(--line);
+      scrollbar-width: none;
+    }
+
+    .chapter-nav::-webkit-scrollbar { height: 0; }
+
+    .chapter-link {
+      position: relative;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: max-content;
+      padding: 0 13px;
+      border: 0;
+      color: var(--dim);
+      background: transparent;
+      cursor: pointer;
+      font-size: 11.5px;
+      font-weight: 800;
+      letter-spacing: 0.09em;
+      text-transform: uppercase;
+      transition: color .16s ease;
+    }
+
+    .chapter-link .num {
+      font-size: 10.5px;
+      font-variant-numeric: tabular-nums;
+      color: color-mix(in srgb, var(--orange) 78%, var(--dim));
+    }
+
+    .chapter-link::after {
+      content: "";
+      position: absolute;
+      left: 11px; right: 11px; bottom: 0;
+      height: 2px;
+      border-radius: 2px 2px 0 0;
+      background: transparent;
+      transition: background .18s ease;
+    }
+
+    .chapter-link:hover { color: var(--body); }
+    .chapter-link.active { color: var(--text); }
+    .chapter-link.active .num { color: var(--orange); }
+    .chapter-link.active::after { background: linear-gradient(90deg, var(--orange), var(--teal)); }
+
+    .progress-track {
+      position: fixed;
+      top: calc(var(--header-h) + var(--nav-h) - 2px);
+      left: 0; right: 0;
+      z-index: 55;
+      height: 2px;
+      pointer-events: none;
+    }
+
+    .progress-bar {
+      width: 0;
+      height: 100%;
+      background: linear-gradient(90deg, var(--orange), var(--teal));
+      box-shadow: 0 0 12px color-mix(in srgb, var(--orange) calc(var(--glow-strength) * 90%), transparent);
+      transition: width .3s cubic-bezier(.22, .8, .3, 1);
+    }
+
+    /* ============================================================
+       CHAPTER SHELL + FLUID TYPE SCALE
+       ============================================================ */
+    main { display: block; }
+
+    .chapter {
+      --fs-base: 1;
+      --fs-fit: 1;
+      --fs: calc(var(--fs-base) * var(--fs-fit));
+
+      --t-micro:   calc(var(--fs) * 11.5px);
+      --t-label:   calc(var(--fs) * 13px);
+      --t-small:   calc(var(--fs) * 14px);
+      --t-body:    calc(var(--fs) * 16px);
+      --t-lede:    calc(var(--fs) * 21px);
+      --t-h4:      calc(var(--fs) * 18px);
+      --t-h3:      calc(var(--fs) * 23px);
+      --t-h2:      calc(var(--fs) * 47px);
+      --t-display: calc(var(--fs) * 86px);
+      --u: calc(var(--fs) * 1px);
+
+      position: relative;
+      isolation: isolate;
+      min-height: calc(100svh - var(--header-h) - var(--nav-h));
+      display: flex;
+      align-items: center;
+      padding: calc(var(--u) * 58) 20px calc(var(--u) * 70);
+      scroll-margin-top: calc(var(--header-h) + var(--nav-h));
+      /* clip (not hidden) so the bleeding numeral never joins the
+         scrollable overflow region - present-mode autofit measures
+         .chapter-inner, and hidden would let decoration skew it. */
+      overflow: clip;
+    }
+
+    .chapter + .chapter { border-top: 1px solid var(--line); }
+
+    /* accent bloom */
+    .chapter::before {
+      content: "";
+      position: absolute;
+      z-index: -2;
+      top: calc(var(--u) * -190);
+      left: -8%;
+      width: 62%;
+      height: calc(var(--u) * 520);
+      background: radial-gradient(50% 50% at 50% 50%,
+                  color-mix(in srgb, var(--accent) calc(var(--glow-strength) * 34%), transparent) 0%,
+                  transparent 72%);
+      pointer-events: none;
+    }
+
+    /* oversized outlined chapter numeral, bleeding off the right edge */
+    .chapter::after {
+      content: attr(data-index);
+      position: absolute;
+      z-index: -1;
+      right: calc(var(--u) * 2);
+      bottom: calc(var(--u) * -40);
+      color: transparent;
+      -webkit-text-stroke: 1.5px var(--line-2);
+      font-size: calc(var(--u) * 320);
+      font-weight: 800;
+      line-height: 0.76;
+      letter-spacing: -0.05em;
+      font-variant-numeric: tabular-nums;
+      opacity: 0.75;
+      pointer-events: none;
+      user-select: none;
+    }
+
+    /* height stays auto, so its bounding box equals the natural content
+       height - that is what the present-mode autofit measures. Vertical
+       centring comes from align-items on .chapter. */
+    .chapter-inner {
+      position: relative;
+      z-index: 1;
+      width: min(100%, var(--measure));
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Editorial vertical rail - a running head. Constant on every slide,
+       so it never echoes the per-slide .kicker. In vertical-rl the inline
+       axis runs top-to-bottom, so this flex row stacks line-then-text
+       downwards and `gap` reads as vertical spacing. */
+    .rail {
+      position: absolute;
+      z-index: 0;
+      top: 50%;
+      left: max(6px, calc((100vw - var(--measure)) / 2 - 34px));
+      display: flex;
+      align-items: center;
+      gap: calc(var(--u) * 14);
+      writing-mode: vertical-rl;
+      color: var(--dim);
+      font-size: calc(var(--u) * 10.5);
+      font-weight: 800;
+      letter-spacing: 0.26em;
+      text-transform: uppercase;
+      white-space: nowrap;
+      transform: translateY(-50%);
+      pointer-events: none;
+    }
+
+    .rail::before {
+      content: "";
+      width: 2px;
+      height: calc(var(--u) * 62);
+      border-radius: 2px;
+      background: linear-gradient(180deg, var(--accent), transparent);
+    }
+
+    /* ---------- headings ---------- */
+    .kicker {
+      display: inline-flex;
+      align-items: center;
+      gap: calc(var(--u) * 10);
+      margin-bottom: calc(var(--u) * 16);
+      color: var(--accent);
+      font-size: var(--t-micro);
+      font-weight: 800;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+    }
+
+    .kicker::before {
+      content: "";
+      width: calc(var(--u) * 26);
+      height: 2px;
+      border-radius: 2px;
+      background: currentColor;
+    }
+
+    .display {
+      max-width: 20ch;
+      font-size: var(--t-display);
+      font-weight: 800;
+      line-height: 0.98;
+      letter-spacing: -0.035em;
+    }
+
+    h2.title {
+      max-width: 30ch;
+      margin-bottom: calc(var(--u) * 14);
+      font-size: var(--t-h2);
+      font-weight: 800;
+      line-height: 1.05;
+      letter-spacing: -0.028em;
+      text-wrap: balance;
+    }
+
+    .grad {
+      background: linear-gradient(96deg, var(--accent) 8%, var(--accent-2) 92%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      color: transparent;
+    }
+
+    .lede {
+      max-width: 74ch;
+      color: var(--body);
+      font-size: var(--t-lede);
+      line-height: 1.46;
+      text-wrap: pretty;
+    }
+
+    .note {
+      color: var(--dim);
+      font-size: var(--t-micro);
+      letter-spacing: 0.01em;
+    }
+
+    /* ---------- reveal ---------- */
+    [data-reveal] {
+      opacity: 0;
+      transform: translateY(calc(var(--u) * 18));
+      transition: opacity .62s cubic-bezier(.22, .8, .3, 1), transform .62s cubic-bezier(.22, .8, .3, 1);
+      transition-delay: calc(var(--i, 0) * 65ms);
+    }
+
+    [data-reveal].in { opacity: 1; transform: none; }
+    body.present-mode [data-reveal] { opacity: 1; transform: none; transition: none; }
+
+    /* ---------- generic surfaces ---------- */
+    .card {
+      position: relative;
+      padding: calc(var(--u) * 22) calc(var(--u) * 24);
+      background: linear-gradient(168deg, var(--surf) 0%, var(--surf-2) 100%);
+      border: 1px solid var(--line);
+      border-radius: calc(var(--u) * 14);
+      box-shadow: var(--shadow-1);
+      transition: border-color .2s ease, transform .2s ease;
+    }
+
+    .card::before {
+      content: "";
+      position: absolute;
+      inset: 0 0 auto 0;
+      height: 2px;
+      border-radius: calc(var(--u) * 14) calc(var(--u) * 14) 0 0;
+      background: linear-gradient(90deg, var(--accent), transparent 82%);
+    }
+
+    .card:hover { border-color: color-mix(in srgb, var(--accent) 42%, var(--line)); }
+
+    .glyph {
+      display: grid;
+      place-items: center;
+      width: calc(var(--u) * 46);
+      height: calc(var(--u) * 46);
+      color: var(--accent);
+      background: color-mix(in srgb, var(--accent) 12%, var(--bg-2));
+      border: 1px solid color-mix(in srgb, var(--accent) 26%, transparent);
+      border-radius: calc(var(--u) * 12);
+      font-size: calc(var(--u) * 21);
+    }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      gap: calc(var(--u) * 6);
+      padding: calc(var(--u) * 5) calc(var(--u) * 10);
+      color: var(--badge-ink);
+      background: var(--accent);
+      border-radius: calc(var(--u) * 6);
+      font-size: var(--t-micro);
+      font-weight: 800;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .tag .icon { font-size: calc(var(--u) * 13); stroke-width: 2.6; }
+
+    .tag.ghost {
+      color: var(--accent);
+      background: color-mix(in srgb, var(--accent) 13%, transparent);
+      border: 1px solid color-mix(in srgb, var(--accent) 36%, transparent);
+    }
+
+    /* ============================================================
+       00 - HERO
+       ============================================================ */
+    .hero {
+      display: grid;
+      grid-template-columns: minmax(0, 1.06fr) minmax(calc(var(--u) * 400), 0.94fr);
+      align-items: center;
+      gap: calc(var(--u) * 58);
+    }
+
+    .chip-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: calc(var(--u) * 8);
+      margin-bottom: calc(var(--u) * 26);
+    }
+
+    .hero .display { margin-bottom: calc(var(--u) * 20); max-width: 17ch; }
+
+    .hero-lede {
+      max-width: 46ch;
+      margin-bottom: calc(var(--u) * 26);
+      color: var(--body);
+      font-size: calc(var(--u) * 24);
+      line-height: 1.44;
+    }
+
+    .topics {
+      display: flex;
+      flex-wrap: wrap;
+      gap: calc(var(--u) * 7) calc(var(--u) * 8);
+      margin-bottom: calc(var(--u) * 34);
+    }
+
+    .topic {
+      padding: calc(var(--u) * 6) calc(var(--u) * 11);
+      color: var(--body);
+      background: var(--surf);
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      font-size: var(--t-small);
+      font-weight: 700;
+    }
+
+    .topic b { color: var(--text); }
+
+    .presenter {
+      display: inline-grid;
+      grid-template-columns: calc(var(--u) * 4) auto;
+      gap: calc(var(--u) * 16);
+      align-items: stretch;
+    }
+
+    .presenter::before {
+      content: "";
+      border-radius: 4px;
+      background: linear-gradient(180deg, var(--teal), var(--blue));
+    }
+
+    .p-name {
+      display: block;
+      font-size: calc(var(--u) * 21);
+      font-weight: 800;
+      letter-spacing: -0.015em;
+    }
+
+    .p-role { display: block; color: var(--body); font-size: var(--t-small); font-weight: 600; }
+    .p-org { display: block; margin-top: calc(var(--u) * 3); color: var(--orange); font-size: var(--t-small); font-weight: 700; }
+    .p-team { display: block; color: var(--dim); font-size: var(--t-small); font-weight: 600; }
+
+    /* --- trace console --- */
+    .console {
+      position: relative;
+      padding: calc(var(--u) * 24);
+      background: linear-gradient(165deg, var(--bg-2) 0%, var(--surf) 130%);
+      border: 1px solid var(--line-2);
+      border-radius: calc(var(--u) * 18);
+      box-shadow: var(--shadow-2);
+    }
+
+    .console-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: calc(var(--u) * 12);
+      padding-bottom: calc(var(--u) * 15);
+      border-bottom: 1px solid var(--line);
+      color: var(--dim);
+      font-size: var(--t-micro);
+      font-weight: 700;
+    }
+
+    .live {
+      display: inline-flex;
+      align-items: center;
+      gap: calc(var(--u) * 7);
+      color: var(--green);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .live::before {
+      content: "";
+      width: calc(var(--u) * 7);
+      height: calc(var(--u) * 7);
+      border-radius: 50%;
+      background: currentColor;
+      box-shadow: 0 0 0 0 color-mix(in srgb, currentColor 55%, transparent);
+      animation: ping 2.4s ease-out infinite;
+    }
+
+    @keyframes ping {
+      0%   { box-shadow: 0 0 0 0 color-mix(in srgb, currentColor 55%, transparent); }
+      70%  { box-shadow: 0 0 0 calc(var(--u) * 8) transparent; }
+      100% { box-shadow: 0 0 0 0 transparent; }
+    }
+
+    .timeline {
+      position: relative;
+      display: grid;
+      gap: calc(var(--u) * 12);
+      margin: calc(var(--u) * 20) 0 calc(var(--u) * 18);
+      padding-left: calc(var(--u) * 30);
+    }
+
+    .timeline::before {
+      content: "";
+      position: absolute;
+      top: calc(var(--u) * 12);
+      bottom: calc(var(--u) * 12);
+      left: calc(var(--u) * 9);
+      width: 2px;
+      border-radius: 2px;
+      background: linear-gradient(180deg, var(--blue), var(--orange) 46%, var(--green));
+      opacity: 0.55;
+    }
+
+    .timeline::after {
+      content: "";
+      position: absolute;
+      left: calc(var(--u) * 6.5);
+      width: calc(var(--u) * 9);
+      height: calc(var(--u) * 9);
+      border-radius: 50%;
+      background: var(--text);
+      box-shadow: 0 0 calc(var(--u) * 14) var(--teal);
+      animation: travel 4.6s cubic-bezier(.5, 0, .5, 1) infinite;
+    }
+
+    @keyframes travel {
+      0%, 8%    { top: calc(var(--u) * 8); opacity: 0; }
+      14%       { opacity: 1; }
+      92%       { top: calc(100% - var(--u) * 17); opacity: 1; }
+      100%      { top: calc(100% - var(--u) * 17); opacity: 0; }
+    }
+
+    .step {
+      position: relative;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      align-items: center;
+      gap: calc(var(--u) * 12);
+      padding: calc(var(--u) * 13) calc(var(--u) * 15);
+      background: color-mix(in srgb, var(--surf) 76%, transparent);
+      border: 1px solid var(--line);
+      border-left: 2px solid var(--sc, var(--line-2));
+      border-radius: calc(var(--u) * 10);
+    }
+
+    .step::before {
+      content: "";
+      position: absolute;
+      left: calc(var(--u) * -25.5);
+      width: calc(var(--u) * 11);
+      height: calc(var(--u) * 11);
+      border-radius: 50%;
+      background: var(--bg-2);
+      border: 2px solid var(--sc, var(--line-2));
+    }
+
+    .step-k {
+      display: block;
+      color: var(--sc, var(--dim));
+      font-size: calc(var(--u) * 10);
+      font-weight: 800;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+    }
+
+    .step-v { display: block; color: var(--text); font-size: var(--t-small); font-weight: 700; }
+    .step .icon { color: var(--sc, var(--dim)); font-size: calc(var(--u) * 18); }
+
+    .console-foot {
+      display: flex;
+      align-items: center;
+      gap: calc(var(--u) * 11);
+      padding: calc(var(--u) * 13) calc(var(--u) * 15);
+      color: var(--body);
+      background: color-mix(in srgb, var(--green) 10%, transparent);
+      border: 1px solid color-mix(in srgb, var(--green) 26%, transparent);
+      border-radius: calc(var(--u) * 10);
+      font-size: var(--t-small);
+    }
+
+    .console-foot .icon { color: var(--green); font-size: calc(var(--u) * 17); stroke-width: 2.4; }
+    .console-foot b { color: var(--text); }
+
+    /* ============================================================
+       01 - RELIABILITY
+       ============================================================ */
+    .impact {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: calc(var(--u) * 8);
+      margin: calc(var(--u) * 26) 0 calc(var(--u) * 16);
+    }
+
+    .impact-item {
+      display: flex;
+      align-items: center;
+      gap: calc(var(--u) * 10);
+      padding: calc(var(--u) * 13) calc(var(--u) * 14);
+      color: var(--body);
+      background: color-mix(in srgb, var(--surf) 60%, transparent);
+      border: 1px solid var(--line);
+      border-radius: calc(var(--u) * 10);
+      font-size: var(--t-small);
+      font-weight: 700;
+    }
+
+    .impact-item .icon { color: var(--orange); font-size: calc(var(--u) * 19); }
+
+    .fails {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: calc(var(--u) * 12);
+    }
+
+    .fail {
+      position: relative;
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: calc(var(--u) * 15);
+      align-items: start;
+      padding: calc(var(--u) * 19) calc(var(--u) * 20);
+      background: linear-gradient(160deg, var(--surf) 0%, var(--surf-2) 100%);
+      border: 1px solid var(--line);
+      border-radius: calc(var(--u) * 14);
+      overflow: hidden;
+      transition: border-color .2s ease, transform .2s ease;
+    }
+
+    .fail::before {
+      content: "";
+      position: absolute;
+      inset: auto auto 0 0;
+      width: 100%;
+      height: calc(var(--u) * 3);
+      background: linear-gradient(90deg, var(--accent), transparent 78%);
+    }
+
+    .fail:hover {
+      transform: translateY(calc(var(--u) * -3));
+      border-color: color-mix(in srgb, var(--accent) 46%, var(--line));
+    }
+
+    .fail-label {
+      display: block;
+      margin-bottom: calc(var(--u) * 4);
+      color: var(--accent);
+      font-size: calc(var(--u) * 10.5);
+      font-weight: 800;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+    }
+
+    .fail h3 {
+      margin-bottom: calc(var(--u) * 6);
+      font-size: calc(var(--u) * 21);
+      font-weight: 800;
+      letter-spacing: -0.02em;
+    }
+
+    .fail p { color: var(--body); font-size: var(--t-small); line-height: 1.42; }
+
+    /* ============================================================
+       02 - ARCHITECTURE
+       ============================================================ */
+    .arch {
+      display: grid;
+      grid-template-columns:
+        minmax(calc(var(--u) * 200), 0.82fr)
+        calc(var(--u) * 76)
+        minmax(calc(var(--u) * 230), 1fr)
+        calc(var(--u) * 62)
+        minmax(calc(var(--u) * 200), 0.86fr);
+      align-items: center;
+      gap: calc(var(--u) * 10);
+      margin: calc(var(--u) * 26) 0 calc(var(--u) * 18);
+    }
+
+    .consumers { display: grid; gap: calc(var(--u) * 10); }
+
+    .consumer {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: calc(var(--u) * 13);
+      align-items: center;
+      padding: calc(var(--u) * 13) calc(var(--u) * 15);
+      background: var(--surf);
+      border: 1px solid var(--line);
+      border-left: calc(var(--u) * 3) solid var(--accent);
+      border-radius: calc(var(--u) * 11);
+    }
+
+    .consumer .glyph { width: calc(var(--u) * 38); height: calc(var(--u) * 38); font-size: calc(var(--u) * 17); border-radius: calc(var(--u) * 10); }
+    .consumer h3 { font-size: var(--t-h4); font-weight: 800; letter-spacing: -0.015em; }
+    .consumer p { color: var(--dim); font-size: var(--t-micro); font-weight: 600; }
+
+    /* stretch so both system nodes share one height and read as a pair */
+    .node {
+      position: relative;
+      align-self: stretch;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: calc(var(--u) * 12);
+      padding: calc(var(--u) * 26);
+      background: linear-gradient(160deg, var(--surf) 0%, var(--surf-2) 100%);
+      border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--line));
+      border-radius: calc(var(--u) * 16);
+      box-shadow: var(--shadow-2);
+    }
+
+    .node::before {
+      content: "";
+      position: absolute;
+      inset: -1px -1px auto -1px;
+      height: calc(var(--u) * 4);
+      border-radius: calc(var(--u) * 16) calc(var(--u) * 16) 0 0;
+      background: linear-gradient(90deg, var(--accent), var(--accent-2));
+    }
+
+    .node h3 { font-size: calc(var(--u) * 26); font-weight: 800; letter-spacing: -0.025em; }
+    .node .sub { color: var(--text); font-size: var(--t-body); font-weight: 700; }
+    .node p { color: var(--body); font-size: var(--t-small); line-height: 1.45; }
+
+    .chips { display: flex; flex-wrap: wrap; gap: calc(var(--u) * 6); }
+
+    .chip {
+      padding: calc(var(--u) * 4) calc(var(--u) * 9);
+      color: var(--body);
+      background: var(--bg-2);
+      border: 1px solid var(--line);
+      border-radius: calc(var(--u) * 6);
+      font-size: calc(var(--u) * 11.5);
+      font-weight: 700;
+    }
+
+    /* SVG connectors */
+    .conn { position: relative; width: 100%; height: calc(var(--u) * 250); }
+    .conn svg { width: 100%; height: 100%; overflow: visible; display: block; }
+    .conn .track { fill: none; stroke: var(--line-2); stroke-width: 1.6; vector-effect: non-scaling-stroke; }
+
+    .conn .pulse {
+      fill: none;
+      stroke: var(--accent);
+      stroke-width: 2.4;
+      stroke-linecap: round;
+      vector-effect: non-scaling-stroke;
+      stroke-dasharray: 26 340;
+      animation: dash 3.4s linear infinite;
+      filter: drop-shadow(0 0 4px color-mix(in srgb, var(--accent) 65%, transparent));
+    }
+
+    .conn .pulse.d2 { animation-delay: .45s; }
+    .conn .pulse.d3 { animation-delay: .9s; }
+
+    @keyframes dash { from { stroke-dashoffset: 366; } to { stroke-dashoffset: 0; } }
+
+    .conn .head { fill: var(--accent); stroke: none; }
+
+    .conn.short { height: calc(var(--u) * 70); }
+
+    .proofs {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: calc(var(--u) * 10);
+    }
+
+    .proof {
+      padding: calc(var(--u) * 16) calc(var(--u) * 18);
+      background: color-mix(in srgb, var(--surf) 62%, transparent);
+      border: 1px solid var(--line);
+      border-top: calc(var(--u) * 3) solid var(--accent);
+      border-radius: calc(var(--u) * 4) calc(var(--u) * 4) calc(var(--u) * 12) calc(var(--u) * 12);
+    }
+
+    .proof strong { display: block; margin-bottom: calc(var(--u) * 4); font-size: var(--t-body); font-weight: 800; letter-spacing: -0.015em; }
+    .proof span { color: var(--dim); font-size: var(--t-small); }
+
+    /* ============================================================
+       03 - EVALUATION
+       ============================================================ */
+    .eval {
+      display: grid;
+      grid-template-columns: minmax(0, 1.2fr) minmax(calc(var(--u) * 320), 0.8fr);
+      gap: calc(var(--u) * 34);
+      align-items: start;
+      margin-top: calc(var(--u) * 26);
+    }
+
+    .lane {
+      display: grid;
+      grid-template-columns: calc(var(--u) * 118) repeat(3, minmax(0, 1fr));
+      gap: calc(var(--u) * 9);
+      margin-bottom: calc(var(--u) * 11);
+    }
+
+    .lane-tag {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: calc(var(--u) * 5);
+      padding: calc(var(--u) * 13) calc(var(--u) * 14);
+      background: color-mix(in srgb, var(--accent) 11%, var(--bg-2));
+      border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+      border-radius: calc(var(--u) * 10);
+    }
+
+    .lane-tag b { font-size: var(--t-small); font-weight: 800; letter-spacing: -0.01em; }
+    .lane-tag span { color: var(--accent); font-size: calc(var(--u) * 10); font-weight: 800; letter-spacing: 0.16em; text-transform: uppercase; }
+
+    .lane-step {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: calc(var(--u) * 4);
+      padding: calc(var(--u) * 13) calc(var(--u) * 14);
+      background: var(--surf);
+      border: 1px solid var(--line);
+      border-top: 2px solid color-mix(in srgb, var(--accent) 60%, transparent);
+      border-radius: calc(var(--u) * 10);
+    }
+
+    .lane-step b { color: var(--text); font-size: var(--t-small); font-weight: 700; }
+    .lane-step span { color: var(--dim); font-size: var(--t-micro); }
+
+    .lane-step:not(:last-child)::after {
+      content: "";
+      position: absolute;
+      right: calc(var(--u) * -7);
+      top: 50%;
+      z-index: 2;
+      width: calc(var(--u) * 7);
+      height: calc(var(--u) * 7);
+      border-top: 1.8px solid var(--accent);
+      border-right: 1.8px solid var(--accent);
+      transform: translateY(-50%) rotate(45deg);
+    }
+
+    .verdict-bar {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      gap: calc(var(--u) * 14);
+      align-items: center;
+      margin-top: calc(var(--u) * 14);
+      padding: calc(var(--u) * 15) calc(var(--u) * 17);
+      background: linear-gradient(100deg, var(--bg-2), var(--surf));
+      border: 1px solid var(--line-2);
+      border-radius: calc(var(--u) * 12);
+    }
+
+    .verdict-bar strong { display: block; font-size: var(--t-body); font-weight: 800; letter-spacing: -0.015em; }
+    .verdict-bar > div > span { color: var(--dim); font-size: var(--t-small); }
+
+    /* ---- verdict switch -------------------------------------------
+       Two segments so this reads as the binary the evaluator emits,
+       rather than one pill labelling a slot. PASS is saturated and
+       glowing; FAIL is muted, so the eye lands on the outcome.
+       Signal green is intentionally literal here and does not follow
+       --green, which is a softer mint used for accents elsewhere.
+       --------------------------------------------------------------- */
+    .verdict-switch {
+      display: inline-flex;
+      align-items: stretch;
+      gap: calc(var(--u) * 3);
+      padding: calc(var(--u) * 3);
+      background: var(--void);
+      border: 1px solid var(--line-2);
+      border-radius: calc(var(--u) * 9);
+    }
+
+    .vs-seg {
+      display: inline-flex;
+      align-items: center;
+      gap: calc(var(--u) * 7);
+      padding: calc(var(--u) * 9) calc(var(--u) * 15);
+      border-radius: calc(var(--u) * 7);
+      font-size: calc(var(--u) * 14);
+      font-weight: 800;
+      letter-spacing: 0.11em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .vs-seg .icon { font-size: calc(var(--u) * 15); stroke-width: 3; }
+
+    .vs-seg.vs-pass {
+      color: #04160C;
+      background: linear-gradient(180deg, #57F5A0 0%, #12C566 100%);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4),
+                  0 0 calc(var(--u) * 20) color-mix(in srgb, #2BE383 calc(var(--glow-strength) * 150%), transparent);
+      animation: verdict-pulse 3s ease-in-out infinite;
+    }
+
+    @keyframes verdict-pulse {
+      0%, 100% { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4),
+                             0 0 calc(var(--u) * 16) color-mix(in srgb, #2BE383 calc(var(--glow-strength) * 110%), transparent); }
+      50%      { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4),
+                             0 0 calc(var(--u) * 30) color-mix(in srgb, #2BE383 calc(var(--glow-strength) * 190%), transparent); }
+    }
+
+    .vs-seg.vs-fail {
+      color: color-mix(in srgb, var(--red) 78%, var(--dim));
+      background: color-mix(in srgb, var(--red) 13%, transparent);
+    }
+
+    .vs-seg.vs-fail .icon { opacity: 0.75; }
+
+    .reasons { display: grid; gap: calc(var(--u) * 10); }
+
+    .reason {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: calc(var(--u) * 13);
+      padding: calc(var(--u) * 15) calc(var(--u) * 16);
+      background: var(--surf);
+      border: 1px solid var(--line);
+      border-left: calc(var(--u) * 3) solid var(--accent);
+      border-radius: calc(var(--u) * 11);
+    }
+
+    .reason .glyph { width: calc(var(--u) * 36); height: calc(var(--u) * 36); font-size: calc(var(--u) * 16); border-radius: calc(var(--u) * 9); }
+    .reason strong { display: block; margin-bottom: calc(var(--u) * 4); font-size: var(--t-body); font-weight: 800; letter-spacing: -0.015em; }
+    .reason p { color: var(--body); font-size: var(--t-small); line-height: 1.42; }
+
+    .callout {
+      margin-top: calc(var(--u) * 12);
+      padding: calc(var(--u) * 14) calc(var(--u) * 16);
+      color: var(--body);
+      background: color-mix(in srgb, var(--orange) 9%, transparent);
+      border: 1px solid color-mix(in srgb, var(--orange) 26%, transparent);
+      border-radius: calc(var(--u) * 11);
+      font-size: var(--t-small);
+      line-height: 1.45;
+    }
+
+    .callout b { color: var(--text); }
+
+    /* ============================================================
+       04 - DEMO 1
+       ============================================================ */
+    .task {
+      display: grid;
+      grid-template-columns: minmax(calc(var(--u) * 200), 0.55fr) minmax(0, 1.45fr);
+      margin: calc(var(--u) * 24) 0 calc(var(--u) * 18);
+      background: var(--bg-2);
+      border: 1px solid var(--line-2);
+      border-radius: calc(var(--u) * 12);
+      overflow: hidden;
+    }
+
+    .task > div { padding: calc(var(--u) * 15) calc(var(--u) * 18); }
+    .task > div + div { border-left: 1px solid var(--line); }
+
+    .task span {
+      display: block;
+      margin-bottom: calc(var(--u) * 5);
+      color: var(--dim);
+      font-size: calc(var(--u) * 10);
+      font-weight: 800;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+    }
+
+    .task strong { font-size: var(--t-body); font-weight: 700; }
+    .task .q { color: var(--text); }
+    .task .q::before, .task .q::after { content: "\201C"; color: var(--orange); }
+    .task .q::after { content: "\201D"; }
+
+    .flow {
+      display: grid;
+      grid-template-columns:
+        minmax(0, 0.86fr) calc(var(--u) * 58)
+        minmax(0, 1.08fr) calc(var(--u) * 58)
+        minmax(0, 0.92fr);
+      align-items: center;
+      gap: calc(var(--u) * 8);
+      margin-bottom: calc(var(--u) * 16);
+    }
+
+    .flow-node {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: calc(var(--u) * 9);
+      padding: calc(var(--u) * 19) calc(var(--u) * 15);
+      text-align: center;
+      background: linear-gradient(165deg, var(--surf), var(--surf-2));
+      border: 1px solid var(--line);
+      border-top: calc(var(--u) * 3) solid var(--accent);
+      border-radius: calc(var(--u) * 13);
+    }
+
+    .flow-node.key {
+      border-color: color-mix(in srgb, var(--accent) 42%, var(--line));
+      box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 22%, transparent),
+                  0 0 calc(var(--u) * 34) calc(var(--u) * -12) color-mix(in srgb, var(--accent) calc(var(--glow-strength) * 130%), transparent);
+    }
+
+    .flow-node strong { font-size: var(--t-h4); font-weight: 800; letter-spacing: -0.018em; }
+    .flow-node .meta { color: var(--dim); font-size: var(--t-micro); font-weight: 700; }
+
+    .assert-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: calc(var(--u) * 9);
+      margin-bottom: calc(var(--u) * 18);
+    }
+
+    .results {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: calc(var(--u) * 12);
+    }
+
+    .result {
+      padding: calc(var(--u) * 18) calc(var(--u) * 19);
+      background: var(--surf);
+      border: 1px solid var(--line);
+      border-left: calc(var(--u) * 3) solid var(--accent);
+      border-radius: calc(var(--u) * 12);
+    }
+
+    .result-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: calc(var(--u) * 10);
+      margin-bottom: calc(var(--u) * 10);
+    }
+
+    .result-head strong { font-size: var(--t-h4); font-weight: 800; letter-spacing: -0.018em; }
+    .result p { color: var(--body); font-size: var(--t-small); line-height: 1.42; }
+
+    /* ============================================================
+       05 - DEMO 2 (split)
+       ============================================================ */
+    .split {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: calc(var(--u) * 16);
+      margin: calc(var(--u) * 26) 0 calc(var(--u) * 16);
+    }
+
+    .case {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      gap: calc(var(--u) * 12);
+      padding: calc(var(--u) * 26);
+      background: linear-gradient(168deg,
+                  color-mix(in srgb, var(--accent) 8%, var(--surf)) 0%,
+                  var(--surf-2) 100%);
+      border: 1px solid color-mix(in srgb, var(--accent) 26%, var(--line));
+      border-radius: calc(var(--u) * 16);
+      overflow: hidden;
+    }
+
+    .case::before {
+      content: "";
+      position: absolute;
+      inset: 0 0 auto 0;
+      height: calc(var(--u) * 4);
+      background: linear-gradient(90deg, var(--accent), transparent 88%);
+    }
+
+    .case-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: calc(var(--u) * 12);
+    }
+
+    .case-head .who {
+      display: flex;
+      align-items: center;
+      gap: calc(var(--u) * 9);
+      color: var(--accent);
+      font-size: var(--t-micro);
+      font-weight: 800;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+    }
+
+    .case-head .icon { font-size: calc(var(--u) * 16); stroke-width: 2.4; }
+
+    /* .case .shout, not .shout - it has to outrank `.case p` below */
+    .case .shout {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      gap: calc(var(--u) * 4) calc(var(--u) * 12);
+      color: var(--accent);
+      font-size: calc(var(--u) * 42);
+      font-weight: 800;
+      line-height: 1.02;
+      letter-spacing: -0.04em;
+    }
+
+    .case .shout .of { color: var(--dim); font-size: calc(var(--u) * 17); font-weight: 700; letter-spacing: 0; }
+    .case p { color: var(--body); font-size: var(--t-small); line-height: 1.45; }
+
+    .out {
+      margin-top: auto;
+      padding: calc(var(--u) * 14) calc(var(--u) * 15);
+      color: var(--body);
+      background: var(--void);
+      border: 1px solid var(--line);
+      border-radius: calc(var(--u) * 10);
+      font-size: calc(var(--u) * 13);
+      line-height: 1.6;
+      overflow-wrap: anywhere;
+    }
+
+    html[data-theme="light"] .out { background: #0D1424; color: #C3CEE2; }
+
+    .out .k { color: #7DD3FC; }
+    .out .s { color: #FDE68A; }
+    .out .p { color: #FCA5A5; }
+    .out .c { color: #64748B; }
+
+    .facts {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: calc(var(--u) * 9);
+    }
+
+    .facts .spacer { flex: 1 1 calc(var(--u) * 40); }
+
+    .facts .conclusion {
+      color: var(--body);
+      font-size: var(--t-small);
+      font-weight: 700;
+      text-align: right;
+    }
+
+    /* ============================================================
+       06 - LADDER
+       ============================================================ */
+    .ladder {
+      position: relative;
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: calc(var(--u) * 14);
+      margin: calc(var(--u) * 34) 0 calc(var(--u) * 16);
+      padding-top: calc(var(--u) * 22);
+    }
+
+    .ladder::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: calc(12.5% - var(--u) * 7);
+      right: calc(12.5% - var(--u) * 7);
+      height: 2px;
+      border-radius: 2px;
+      background: linear-gradient(90deg, var(--teal), var(--green) 34%, var(--blue) 67%, var(--orange));
+    }
+
+    .rung {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      padding: calc(var(--u) * 22) calc(var(--u) * 20);
+      background: linear-gradient(170deg, var(--surf), var(--surf-2));
+      border: 1px solid var(--line);
+      border-radius: calc(var(--u) * 14);
+      transition: transform .2s ease, border-color .2s ease;
+    }
+
+    .rung::before {
+      content: "";
+      position: absolute;
+      top: calc(var(--u) * -27);
+      left: 50%;
+      width: calc(var(--u) * 12);
+      height: calc(var(--u) * 12);
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 0 calc(var(--u) * 4) var(--bg),
+                  0 0 calc(var(--u) * 16) color-mix(in srgb, var(--accent) calc(var(--glow-strength) * 140%), transparent);
+      transform: translateX(-50%);
+    }
+
+    .rung:hover { transform: translateY(calc(var(--u) * -4)); border-color: color-mix(in srgb, var(--accent) 44%, var(--line)); }
+
+    .rung-n {
+      display: block;
+      margin-bottom: calc(var(--u) * 12);
+      color: transparent;
+      -webkit-text-stroke: 1.4px var(--accent);
+      font-size: calc(var(--u) * 52);
+      font-weight: 800;
+      line-height: 0.9;
+      letter-spacing: -0.05em;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .rung h3 { margin-bottom: calc(var(--u) * 8); font-size: calc(var(--u) * 22); font-weight: 800; letter-spacing: -0.022em; }
+    .rung p { color: var(--body); font-size: var(--t-small); line-height: 1.44; }
+
+    .when {
+      display: flex;
+      align-items: flex-start;
+      gap: calc(var(--u) * 8);
+      margin-top: auto;
+      padding-top: calc(var(--u) * 14);
+      color: var(--dim);
+      border-top: 1px solid var(--line);
+      font-size: var(--t-micro);
+      line-height: 1.4;
+    }
+
+    .when .icon { margin-top: calc(var(--u) * 2); color: var(--accent); font-size: calc(var(--u) * 14); }
+
+    .banner {
+      display: flex;
+      align-items: center;
+      gap: calc(var(--u) * 13);
+      padding: calc(var(--u) * 16) calc(var(--u) * 19);
+      color: var(--body);
+      background: linear-gradient(100deg,
+                  color-mix(in srgb, var(--accent) 12%, transparent),
+                  transparent 76%);
+      border: 1px solid color-mix(in srgb, var(--accent) 28%, transparent);
+      border-radius: calc(var(--u) * 12);
+      font-size: var(--t-body);
+      font-weight: 700;
+      line-height: 1.42;
+    }
+
+    .banner .icon { color: var(--accent); font-size: calc(var(--u) * 20); stroke-width: 2.3; }
+
+    /* ============================================================
+       07 - TAKEAWAYS
+       ============================================================ */
+    .takes {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: calc(var(--u) * 14);
+      margin: calc(var(--u) * 30) 0 calc(var(--u) * 16);
+    }
+
+    .take {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      padding: calc(var(--u) * 26);
+      background: linear-gradient(168deg, var(--surf), var(--surf-2));
+      border: 1px solid var(--line);
+      border-radius: calc(var(--u) * 16);
+      overflow: hidden;
+    }
+
+    .take::before {
+      content: "";
+      position: absolute;
+      inset: 0 0 auto 0;
+      height: calc(var(--u) * 4);
+      background: linear-gradient(90deg, var(--accent), transparent 84%);
+    }
+
+    .take .glyph {
+      width: calc(var(--u) * 52);
+      height: calc(var(--u) * 52);
+      margin-bottom: calc(var(--u) * 20);
+      font-size: calc(var(--u) * 24);
+      border-radius: calc(var(--u) * 14);
+    }
+
+    .take h3 { margin-bottom: calc(var(--u) * 9); font-size: calc(var(--u) * 26); font-weight: 800; letter-spacing: -0.026em; }
+    .take p { color: var(--body); font-size: var(--t-body); line-height: 1.46; }
+
+    .take .action {
+      margin-top: auto;
+      padding-top: calc(var(--u) * 16);
+      color: var(--accent);
+      border-top: 1px solid var(--line);
+      font-size: var(--t-small);
+      font-weight: 700;
+    }
+
+    /* ============================================================
+       08 - SOURCE
+       ============================================================ */
+    .repo {
+      display: grid;
+      grid-template-columns: minmax(0, 1.14fr) minmax(calc(var(--u) * 320), 0.86fr);
+      gap: calc(var(--u) * 32);
+      align-items: stretch;
+      margin: calc(var(--u) * 26) 0 calc(var(--u) * 18);
+    }
+
+    .repo-list {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: calc(var(--u) * 9);
+      align-content: center;
+    }
+
+    .repo-item {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: calc(var(--u) * 12);
+      align-items: center;
+      padding: calc(var(--u) * 14) calc(var(--u) * 15);
+      background: var(--surf);
+      border: 1px solid var(--line);
+      border-radius: calc(var(--u) * 11);
+      transition: border-color .18s ease;
+    }
+
+    .repo-item:hover { border-color: color-mix(in srgb, var(--teal) 44%, var(--line)); }
+    .repo-item .glyph { width: calc(var(--u) * 34); height: calc(var(--u) * 34); font-size: calc(var(--u) * 15); border-radius: calc(var(--u) * 9); }
+    .repo-item strong { display: block; font-size: var(--t-small); font-weight: 800; letter-spacing: -0.01em; }
+    .repo-item span { color: var(--dim); font-size: var(--t-micro); }
+
+    .repo-panel {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: calc(var(--u) * 14);
+      padding: calc(var(--u) * 26);
+      text-align: center;
+      background: linear-gradient(168deg, var(--bg-2), var(--surf));
+      border: 1px solid var(--line-2);
+      border-radius: calc(var(--u) * 18);
+      box-shadow: var(--shadow-2);
+    }
+
+    .qr {
+      width: calc(var(--u) * 176);
+      height: calc(var(--u) * 176);
+      padding: calc(var(--u) * 10);
+      background: #FFFFFF;
+      border-radius: calc(var(--u) * 12);
+      box-shadow: 0 0 0 1px var(--line-2);
+    }
+
+    .qr img { width: 100%; height: 100%; display: block; image-rendering: pixelated; }
+
+    .repo-panel h3 { font-size: calc(var(--u) * 22); font-weight: 800; letter-spacing: -0.024em; }
+    .repo-url { color: var(--teal); font-size: var(--t-small); overflow-wrap: anywhere; }
+
+    .repo-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: calc(var(--u) * 9); }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: calc(var(--u) * 8);
+      min-height: calc(var(--u) * 38);
+      padding: 0 calc(var(--u) * 15);
+      color: var(--text);
+      background: var(--surf-2);
+      border: 1px solid var(--line-2);
+      border-radius: calc(var(--u) * 9);
+      cursor: pointer;
+      font-size: var(--t-small);
+      font-weight: 800;
+      transition: transform .16s ease, border-color .16s ease, background .16s ease;
+    }
+
+    .btn .icon { font-size: calc(var(--u) * 15); }
+    .btn:hover { transform: translateY(-1px); border-color: var(--teal); }
+
+    .btn.primary {
+      color: var(--badge-ink);
+      background: linear-gradient(140deg, var(--orange), var(--ember));
+      border-color: transparent;
+    }
+
+    .closing {
+      font-size: calc(var(--u) * 20);
+      font-weight: 700;
+      letter-spacing: -0.015em;
+    }
+
+    .closing b { color: var(--orange); }
+    .closing span { color: var(--dim); font-weight: 600; }
+
+    /* ============================================================
+       PRESENT MODE
+       ============================================================ */
+    /* Chrome, not slide content: uses fixed px like .topbar and .toast.
+       --u / --t-* are declared on .chapter, so they do NOT resolve here -
+       referencing them made every declaration below invalid at
+       computed-value time and dropped the bar off-screen. */
+    .present-bar {
+      position: fixed;
+      left: 50%;
+      bottom: 16px;
+      z-index: 90;
+      display: none;
+      align-items: center;
+      gap: 8px;
+      padding: 6px;
+      background: color-mix(in srgb, var(--void) 90%, transparent);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--line-2);
+      border-radius: 12px;
+      box-shadow: var(--shadow-2);
+      transform: translateX(-50%);
+    }
+
+    .counter {
+      min-width: 62px;
+      color: var(--body);
+      text-align: center;
+      font-size: 14px;
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .counter b { color: var(--text); }
+
+    body.present-mode { height: 100svh; overflow: hidden; }
+    body.present-mode .chapter-nav { display: none; }
+    body.present-mode .progress-track { top: calc(var(--header-h) - 2px); }
+    body.present-mode main { height: calc(100svh - var(--header-h)); }
+    body.present-mode .present-bar { display: flex; }
+
+    body.present-mode .chapter {
+      display: none;
+      height: calc(100svh - var(--header-h));
+      min-height: 0;
+      padding: calc(var(--u) * 26) 24px calc(var(--u) * 62);
+      border-top: 0;
+      overflow: clip;
+    }
+
+    /* only if a slide still cannot fit at the smallest autofit step */
+    body.present-mode .chapter.overflowing { overflow: auto; }
+
+    body.present-mode .chapter.active { display: flex; animation: slide-in .34s cubic-bezier(.22, .8, .3, 1); }
+
+    @keyframes slide-in {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: none; }
+    }
+
+    body.present-mode .chapter::after { bottom: calc(var(--u) * -26); font-size: calc(var(--u) * 210); }
+
+    /* ============================================================
+       RESPONSIVE
+       ============================================================ */
+    @media (max-width: 1360px) { .chapter { --fs-base: .94; } }
+    @media (max-width: 1180px) { .chapter { --fs-base: .88; } }
+
+    @media (max-width: 1080px) {
+      .chapter { --fs-base: .92; padding-left: 18px; padding-right: 18px; }
+      .rail { display: none; }
+      .hero, .eval, .repo { grid-template-columns: minmax(0, 1fr); }
+      .hero { gap: calc(var(--u) * 36); }
+      .impact { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .impact-item:nth-child(4) { grid-column: span 2; }
+
+      .arch { grid-template-columns: minmax(0, 1fr); }
+      .consumers { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .conn { height: calc(var(--u) * 56); }
+      .conn svg { transform: rotate(90deg) scale(.5); transform-origin: center; }
+      .repo-list { grid-template-columns: 1fr 1fr; }
+      .flow { grid-template-columns: minmax(0, 1fr); }
+      .flow .conn { height: calc(var(--u) * 40); }
+    }
+
+    @media (max-width: 860px) {
+      :root { --header-h: 56px; --nav-h: 46px; }
+      .chapter { --fs-base: .86; padding-top: calc(var(--u) * 44); }
+      .toolbar .hide-sm { display: none; }
+      .fails, .results, .takes, .proofs, .ladder { grid-template-columns: 1fr 1fr; }
+      .ladder::before { display: none; }
+      .rung::before { display: none; }
+      .split { grid-template-columns: 1fr; }
+      .lane { grid-template-columns: calc(var(--u) * 100) 1fr; }
+      .lane-step:not(:last-child)::after { display: none; }
+      .task { grid-template-columns: 1fr; }
+      .task > div + div { border-left: 0; border-top: 1px solid var(--line); }
+      .facts .conclusion { text-align: left; }
+    }
+
+    @media (max-width: 600px) {
+      .chapter { --fs-base: .8; }
+      .brand-text { display: none; }
+      .mode-btn { padding: 0 10px; }
+      .mode-btn .label { display: none; }
+      .chapter-link .label { display: none; }
+      .chapter-link { padding: 0 11px; }
+      .fails, .results, .takes, .proofs, .ladder, .consumers, .repo-list { grid-template-columns: 1fr; }
+      .impact { grid-template-columns: 1fr 1fr; }
+      .impact-item:nth-child(4) { grid-column: auto; }
+      .impact-item:last-child { grid-column: span 2; }
+      .chapter::after { font-size: calc(var(--u) * 200); }
+      body.present-mode .chapter { overflow: auto; }
+    }
+
+    /* the running head needs vertical room; drop it rather than clip it */
+    @media (max-height: 600px) {
+      .rail { display: none; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      *, *::before, *::after { animation: none !important; transition: none !important; }
+      [data-reveal] { opacity: 1 !important; transform: none !important; }
+
+      /* the travelling pulse/dot only reads as intentional while moving;
+         without animation, show a solid accent connector instead. */
+      .conn .pulse, .timeline::after { display: none; }
+      .conn .track { stroke: var(--accent); stroke-width: 2; }
+    }
+
+    /* ============================================================
+       PRINT
+       ============================================================ */
+    @media print {
+      :root {
+        --void: #FFF; --bg: #FFF; --bg-2: #FFF; --surf: #F5F7FA; --surf-2: #EEF2F7; --surf-3: #E6ECF4;
+        --line: #C3CCD8; --line-2: #9AA6B6; --text: #0B1426; --body: #37455E; --dim: #5D6A80;
+        --orange: #9A5600; --teal: #02657A; --blue: #2F49BE; --purple: #612AB8; --green: #0E6B37;
+        --red: #A22110; --yellow: #7B5A09; --badge-ink: #FFF; --glow-strength: 0;
+        --shadow-1: none; --shadow-2: none;
+      }
+      .topbar, .chapter-nav, .progress-track, .present-bar, .toast { display: none !important; }
+      body { background: #FFF; }
+      .chapter {
+        display: flex !important;
+        --fs-base: .82;
+        min-height: 100vh;
+        padding: 26px 30px;
+        border-top: 0;
+        page-break-after: always;
+        break-after: page;
+      }
+      .chapter:last-child { page-break-after: auto; break-after: auto; }
+      .chapter::before { display: none; }
+      .chapter::after { -webkit-text-stroke-color: #DCE3EC; }
+      [data-reveal] { opacity: 1 !important; transform: none !important; }
+      .out { background: #131B2E !important; color: #C3CEE2 !important; }
+    }
+
+    /* ============================================================
+       TOAST
+       ============================================================ */
+    .toast {
+      position: fixed;
+      left: 50%;
+      bottom: 22px;
+      z-index: 120;
+      padding: 10px 14px;
+      color: var(--text);
+      background: color-mix(in srgb, var(--void) 94%, transparent);
+      border: 1px solid var(--line-2);
+      border-radius: 9px;
+      box-shadow: var(--shadow-2);
+      opacity: 0;
+      pointer-events: none;
+      transform: translate(-50%, 10px);
+      transition: opacity .18s ease, transform .18s ease;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .toast.show { opacity: 1; transform: translate(-50%, 0); }
+  </style>
+</head>
+<body>
+
+<svg class="icon-sprite" aria-hidden="true">
+  <symbol id="i-read" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></symbol>
+  <symbol id="i-present" viewBox="0 0 24 24"><path d="M2 3h20"/><path d="M4 3v13h16V3"/><path d="m8 21 4-5 4 5"/></symbol>
+  <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.42-1.42M17.66 6.34l1.41-1.41"/></symbol>
+  <symbol id="i-moon" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></symbol>
+  <symbol id="i-print" viewBox="0 0 24 24"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></symbol>
+  <symbol id="i-full" viewBox="0 0 24 24"><path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3"/></symbol>
+  <symbol id="i-left" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></symbol>
+  <symbol id="i-right" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
+  <symbol id="i-tool" viewBox="0 0 24 24"><path d="M14.7 6.3a4 4 0 0 0-5-5l2.1 2.1-2.4 2.4-2.1-2.1a4 4 0 0 0 5 5L19 15.4l-3.6 3.6-6.7-6.7"/><path d="m5 13-3 3 6 6 3-3"/></symbol>
+  <symbol id="i-braces" viewBox="0 0 24 24"><path d="M8 3H7a2 2 0 0 0-2 2v5a2 2 0 0 1-2 2 2 2 0 0 1 2 2v5a2 2 0 0 0 2 2h1M16 3h1a2 2 0 0 1 2 2v5a2 2 0 0 0 2 2 2 2 0 0 0-2 2v5a2 2 0 0 1-2 2h-1"/></symbol>
+  <symbol id="i-branch" viewBox="0 0 24 24"><circle cx="6" cy="4" r="2"/><circle cx="18" cy="6" r="2"/><circle cx="18" cy="18" r="2"/><path d="M6 6v10a2 2 0 0 0 2 2h8M8 8c0-1.1.9-2 2-2h6"/></symbol>
+  <symbol id="i-stop" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="1"/></symbol>
+  <symbol id="i-slash" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m5.6 18.4 12.8-12.8"/></symbol>
+  <symbol id="i-code" viewBox="0 0 24 24"><path d="m8 9-4 3 4 3M16 9l4 3-4 3M14 5l-4 14"/></symbol>
+  <symbol id="i-coins" viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="7" ry="3"/><path d="M5 5v5c0 1.7 3.1 3 7 3s7-1.3 7-3V5M5 10v5c0 1.7 3.1 3 7 3s7-1.3 7-3v-5M5 15v4c0 1.7 3.1 3 7 3s7-1.3 7-3v-4"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+  <symbol id="i-alert" viewBox="0 0 24 24"><path d="M10.3 2.9 1.8 17a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 2.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></symbol>
+  <symbol id="i-zap" viewBox="0 0 24 24"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></symbol>
+  <symbol id="i-server" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="7" rx="2"/><rect x="3" y="14" width="18" height="7" rx="2"/><path d="M7 6h.01M7 17h.01"/></symbol>
+  <symbol id="i-users" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></symbol>
+  <symbol id="i-cpu" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><path d="M9 1v3M15 1v3M9 20v3M15 20v3M20 9h3M20 14h3M1 9h3M1 14h3"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></symbol>
+  <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></symbol>
+  <symbol id="i-replay" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></symbol>
+  <symbol id="i-terminal" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="m7 9 3 3-3 3M13 15h4"/></symbol>
+  <symbol id="i-message" viewBox="0 0 24 24"><path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"/></symbol>
+  <symbol id="i-github" viewBox="0 0 24 24"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3.3-.4 6.8-1.6 6.8-7A5.4 5.4 0 0 0 19.4 4 5 5 0 0 0 19.3.5S18.2.1 15 1.8a13.4 13.4 0 0 0-7 0C4.8.1 3.7.5 3.7.5A5 5 0 0 0 3.6 4a5.4 5.4 0 0 0-1.4 3.7c0 5.4 3.5 6.6 6.8 7A4.8 4.8 0 0 0 8 18v4"/><path d="M8 19c-3 .9-3-1.5-4-2"/></symbol>
+  <symbol id="i-copy" viewBox="0 0 24 24"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></symbol>
+  <symbol id="i-external" viewBox="0 0 24 24"><path d="M15 3h6v6M10 14 21 3M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></symbol>
+  <symbol id="i-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.4"/></symbol>
+  <symbol id="i-layers" viewBox="0 0 24 24"><path d="m12 2 9 5-9 5-9-5 9-5z"/><path d="m3 12 9 5 9-5M3 17l9 5 9-5"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></symbol>
+</svg>
+
+<header class="topbar">
+  <a class="brand" href="#overview" aria-label="Go to overview">
+    <span class="brand-mark" aria-hidden="true">
+      <svg class="icon" aria-hidden="true"><use href="#i-braces"></use></svg>
+    </span>
+    <span class="brand-text">Tool-Calling Consistency Lab</span>
+  </a>
+  <div class="toolbar">
+    <div class="segmented" role="group" aria-label="Viewing mode">
+      <button class="mode-btn" id="readMode" type="button" aria-pressed="true" aria-label="Read mode" title="Read mode (scrolling)">
+        <svg class="icon" aria-hidden="true"><use href="#i-read"></use></svg><span class="label">Read</span>
+      </button>
+      <button class="mode-btn" id="presentMode" type="button" aria-pressed="false" aria-label="Present mode" title="Present mode (one slide at a time)">
+        <svg class="icon" aria-hidden="true"><use href="#i-present"></use></svg><span class="label">Present</span>
+      </button>
+    </div>
+    <button class="icon-btn" id="themeToggle" type="button" aria-label="Use light theme" title="Toggle theme (T)">
+      <svg class="icon" aria-hidden="true"><use id="themeIcon" href="#i-sun"></use></svg>
+    </button>
+    <button class="icon-btn hide-sm" id="printButton" type="button" aria-label="Print" title="Print / save as PDF">
+      <svg class="icon" aria-hidden="true"><use href="#i-print"></use></svg>
+    </button>
+    <button class="icon-btn" id="fullButton" type="button" aria-label="Enter full screen" title="Full screen (F)">
+      <svg class="icon" aria-hidden="true"><use href="#i-full"></use></svg>
+    </button>
+  </div>
+</header>
+
+<nav class="chapter-nav" id="chapterNav" aria-label="Chapters">
+  <button class="chapter-link active" type="button" data-target="overview"><span class="num">00</span><span class="label">Overview</span></button>
+  <button class="chapter-link" type="button" data-target="reliability"><span class="num">01</span><span class="label">Reliability</span></button>
+  <button class="chapter-link" type="button" data-target="architecture"><span class="num">02</span><span class="label">Architecture</span></button>
+  <button class="chapter-link" type="button" data-target="evaluation"><span class="num">03</span><span class="label">Evaluation</span></button>
+  <button class="chapter-link" type="button" data-target="one-tool"><span class="num">04</span><span class="label">One Tool</span></button>
+  <button class="chapter-link" type="button" data-target="no-tool"><span class="num">05</span><span class="label">No Tool</span></button>
+  <button class="chapter-link" type="button" data-target="remediation"><span class="num">06</span><span class="label">Remediation</span></button>
+  <button class="chapter-link" type="button" data-target="takeaways"><span class="num">07</span><span class="label">Takeaways</span></button>
+  <button class="chapter-link" type="button" data-target="source"><span class="num">08</span><span class="label">Source</span></button>
+</nav>
+
+<div class="progress-track" aria-hidden="true"><div class="progress-bar" id="progressBar"></div></div>
+
+<main>
+
+  <!-- ================= 00 OVERVIEW ================= -->
+  <section class="chapter active" id="overview" data-index="00" aria-labelledby="t-overview"
+           style="--accent: var(--orange); --accent-2: var(--ember);">
+    <p class="rail" aria-hidden="true">Tool-Calling Consistency Lab</p>
+    <div class="chapter-inner hero">
+      <div>
+        <div class="chip-row" data-reveal style="--i:0">
+          <span class="tag" style="--accent: var(--orange)">Tool calling</span>
+          <span class="tag ghost" style="--accent: var(--teal)">MCP lab</span>
+        </div>
+        <h1 class="display" id="t-overview" data-reveal style="--i:1">
+          Making agent tool calls <span class="grad">reliable</span>.
+        </h1>
+        <p class="hero-lede" data-reveal style="--i:2">
+          Measure, replay, and fix tool-call failures <em>before</em> production.
+        </p>
+        <ul class="topics" data-reveal style="--i:3">
+          <li class="topic"><b>Evaluator</b></li>
+          <li class="topic"><b>MCP tools</b></li>
+          <li class="topic"><b>Quarkus</b> + <b>Strands</b></li>
+          <li class="topic"><b>Model customization</b></li>
+        </ul>
+        <div class="presenter" data-reveal style="--i:4">
+          <div>
+            <span class="p-name">Muru Bhaskaran</span>
+            <span class="p-role">Sr. Specialist Solutions Architect</span>
+            <span class="p-org">Amazon Web Services (AWS)</span>
+            <span class="p-team">GenAI &amp; Agentic Platform</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="console" data-reveal style="--i:2" aria-label="Illustration of a captured tool-call trace">
+        <div class="console-head">
+          <span class="mono">trace / compute.single.spec.001</span>
+          <span class="live">captured</span>
+        </div>
+        <div class="timeline">
+          <div class="step" style="--sc: var(--blue)">
+            <span><span class="step-k">Request</span><span class="step-v">User intent</span></span>
+            <svg class="icon" aria-hidden="true"><use href="#i-message"></use></svg>
+          </div>
+          <div class="step" style="--sc: var(--orange)">
+            <span><span class="step-k">Tool call</span><span class="step-v mono">get_instance_spec</span></span>
+            <svg class="icon" aria-hidden="true"><use href="#i-tool"></use></svg>
+          </div>
+          <div class="step" style="--sc: var(--teal)">
+            <span><span class="step-k">Tool result</span><span class="step-v">Deterministic payload</span></span>
+            <svg class="icon" aria-hidden="true"><use href="#i-cpu"></use></svg>
+          </div>
+          <div class="step" style="--sc: var(--green)">
+            <span><span class="step-k">Response</span><span class="step-v">Required JSON contract</span></span>
+            <svg class="icon" aria-hidden="true"><use href="#i-braces"></use></svg>
+          </div>
+        </div>
+        <p class="console-foot">
+          <svg class="icon" aria-hidden="true"><use href="#i-check"></use></svg>
+          <span><b>Reliable means:</b> the right path, the right state, and the right response shape.</span>
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 01 RELIABILITY ================= -->
+  <section class="chapter" id="reliability" data-index="01" aria-labelledby="t-reliability"
+           style="--accent: var(--red); --accent-2: var(--yellow);">
+    <p class="rail" aria-hidden="true">Tool-Calling Consistency Lab</p>
+    <div class="chapter-inner">
+      <p class="kicker" data-reveal style="--i:0">External signal</p>
+      <h2 class="title" id="t-reliability" data-reveal style="--i:1">
+        Reliability gaps live <span class="grad">beyond one tool call</span>
+      </h2>
+      <p class="lede" data-reveal style="--i:2">
+        When models choose, order, abstain, or stop incorrectly, the failure reaches the customer.
+      </p>
+
+      <ul class="impact" data-reveal style="--i:3" aria-label="Customer impact">
+        <li class="impact-item"><svg class="icon" aria-hidden="true"><use href="#i-coins"></use></svg><span>More tokens and cost</span></li>
+        <li class="impact-item"><svg class="icon" aria-hidden="true"><use href="#i-clock"></use></svg><span>Added latency</span></li>
+        <li class="impact-item"><svg class="icon" aria-hidden="true"><use href="#i-alert"></use></svg><span>Inaccurate answers</span></li>
+        <li class="impact-item"><svg class="icon" aria-hidden="true"><use href="#i-zap"></use></svg><span>Unwanted actions</span></li>
+        <li class="impact-item"><svg class="icon" aria-hidden="true"><use href="#i-lock"></use></svg><span>Brittle automation</span></li>
+      </ul>
+
+      <div class="fails">
+        <article class="fail" data-reveal style="--accent: var(--red); --i:4">
+          <span class="glyph"><svg class="icon" aria-hidden="true"><use href="#i-tool"></use></svg></span>
+          <div><span class="fail-label">Choose</span><h3>Wrong tool</h3><p>A plausible extra call changes cost, latency, or policy posture.</p></div>
+        </article>
+        <article class="fail" data-reveal style="--accent: var(--yellow); --i:5">
+          <span class="glyph"><svg class="icon" aria-hidden="true"><use href="#i-braces"></use></svg></span>
+          <div><span class="fail-label">Shape</span><h3>Schema drift</h3><p>Right tool, wrong input contract.</p></div>
+        </article>
+        <article class="fail" data-reveal style="--accent: var(--blue); --i:6">
+          <span class="glyph"><svg class="icon" aria-hidden="true"><use href="#i-branch"></use></svg></span>
+          <div><span class="fail-label">Order</span><h3>Dependency failure</h3><p>The model skips evidence or collapses serial steps.</p></div>
+        </article>
+        <article class="fail" data-reveal style="--accent: var(--orange); --i:7">
+          <span class="glyph"><svg class="icon" aria-hidden="true"><use href="#i-stop"></use></svg></span>
+          <div><span class="fail-label">Stop</span><h3>Turn drift</h3><p>Enough evidence exists, but the model keeps calling tools.</p></div>
+        </article>
+        <article class="fail" data-reveal style="--accent: var(--purple); --i:8">
+          <span class="glyph"><svg class="icon" aria-hidden="true"><use href="#i-slash"></use></svg></span>
+          <div><span class="fail-label">Abstain</span><h3>No-tool tasks</h3><p>The model must know when no tool applies.</p></div>
+        </article>
+        <article class="fail" data-reveal style="--accent: var(--green); --i:9">
+          <span class="glyph"><svg class="icon" aria-hidden="true"><use href="#i-code"></use></svg></span>
+          <div><span class="fail-label">Format</span><h3>Prose instead of JSON</h3><p>Tools are avoided correctly, but the final response misses the required JSON.</p></div>
+        </article>
+      </div>
+
+      <p class="note" data-reveal style="--i:10; margin-top: calc(var(--u) * 16)">
+        Source: Berkeley Function-Calling Leaderboard V4 and BFCL ICML 2025 paper.
+      </p>
+    </div>
+  </section>
+
+  <!-- ================= 02 ARCHITECTURE ================= -->
+  <section class="chapter" id="architecture" data-index="02" aria-labelledby="t-architecture"
+           style="--accent: var(--orange); --accent-2: var(--teal);">
+    <p class="rail" aria-hidden="true">Tool-Calling Consistency Lab</p>
+    <div class="chapter-inner">
+      <p class="kicker" data-reveal style="--i:0">Architecture</p>
+      <h2 class="title" id="t-architecture" data-reveal style="--i:1; --accent-2: var(--ember)">
+        One MCP surface, <span class="grad">three consumers</span>
+      </h2>
+      <p class="lede" data-reveal style="--i:2">
+        The evaluator is the benchmark source of truth. Quarkus and Strands prove the same tool contract from production-shaped clients.
+      </p>
+
+      <div class="arch" aria-label="System architecture: three consumers call one MCP server, which calls a deterministic domain backend">
+        <div class="consumers" data-reveal style="--i:3">
+          <div class="consumer" style="--accent: var(--blue)">
+            <span class="glyph"><svg class="icon" aria-hidden="true"><use href="#i-check"></use></svg></span>
+            <div><h3>Evaluator</h3><p>Source of truth</p></div>
+          </div>
+          <div class="consumer" style="--accent: var(--purple)">
+            <span class="glyph"><svg class="icon" aria-hidden="true"><use href="#i-code"></use></svg></span>
+            <div><h3>Quarkus AI</h3><p>Java AI agent</p></div>
+          </div>
+          <div class="consumer" style="--accent: var(--green)">
+            <span class="glyph"><svg class="icon" aria-hidden="true"><use href="#i-branch"></use></svg></span>
+            <div><h3>Strands Agent</h3><p>Python AI agent</p></div>
+          </div>
+        </div>
+
+        <div class="conn" data-reveal style="--i:4" aria-hidden="true">
+          <svg viewBox="0 0 76 250" preserveAspectRatio="none" role="presentation">
+            <path class="track" d="M0 42 C 40 42, 36 125, 76 125"/>
+            <path class="track" d="M0 125 L 76 125"/>
+            <path class="track" d="M0 208 C 40 208, 36 125, 76 125"/>
+            <path class="pulse"    d="M0 42 C 40 42, 36 125, 76 125"/>
+            <path class="pulse d2" d="M0 125 L 76 125"/>
+            <path class="pulse d3" d="M0 208 C 40 208, 36 125, 76 125"/>
+            <polygon class="head" points="76,125 68,120 68,130"/>
+          </svg>
+        </div>
+
+        <div class="node" data-reveal style="--i:5; --accent: var(--orange); --accent-2: var(--ember)">
+          <span class="glyph"><svg class="icon" aria-hidden="true"><use href="#i-server"></use></svg></span>
+          <h3>MCP server</h3>
+          <p class="sub">Shared tool surface</p>
+          <p>Tools, schemas, guardrails, and resources.</p>
+          <div class="chips">
+            <span class="chip">Quarkus 3.38.1</span>
+            <span class="chip">MCP Server 2.0.0.CR1</span>
+          </div>
+        </div>
+
+        <div class="conn short" data-reveal style="--i:6; --accent: var(--teal)" aria-hidden="true">
+          <svg viewBox="0 0 62 70" preserveAspectRatio="none" role="presentation">
+            <path class="track" d="M0 35 L 62 35"/>
+            <path class="pulse" d="M0 35 L 62 35"/>
+            <polygon class="head" points="62,35 54,30 54,40"/>
+          </svg>
+        </div>
+
+        <div class="node" data-reveal style="--i:7; --accent: var(--teal); --accent-2: var(--blue)">
+          <span class="glyph"><svg class="icon" aria-hidden="true"><use href="#i-cpu"></use></svg></span>
+          <h3>Domain backend</h3>
+          <p class="sub">Deterministic compute</p>
+          <p>Specifications, pricing, and fit plans.</p>
+        </div>
+      </div>
+
+      <div class="proofs">
+        <div class="proof" data-reveal style="--accent: var(--blue); --i:8"><strong>Evaluator = benchmark truth</strong><span>Scores accepted vs observed behavior.</span></div>
+        <div class="proof" data-reveal style="--accent: var(--purple); --i:9"><strong>Clients = portability proof</strong><span>Quarkus and Strands hit the same MCP surface.</span></div>
+        <div class="proof" data-reveal style="--accent: var(--orange); --i:10"><strong>Shared contract</strong><span>Same tools, schemas, transport, and guardrails.</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 03 EVALUATION ================= -->
+  <section class="chapter" id="evaluation" data-index="03" aria-labelledby="t-evaluation"
+           style="--accent: var(--purple); --accent-2: var(--blue);">
+    <p class="rail" aria-hidden="true">Tool-Calling Consistency Lab</p>
+    <div class="chapter-inner">
+      <p class="kicker" data-reveal style="--i:0">Evaluator first</p>
+      <h2 class="title" id="t-evaluation" data-reveal style="--i:1">
+        The score comes from the trace, <span class="grad">not the final-answer vibe</span>
+      </h2>
+      <p class="lede" data-reveal style="--i:2">
+        Each task has accepted behavior. Tool calls, arguments, final state, and response contract are compared against it.
+      </p>
+
+      <div class="eval">
+        <div>
+          <div class="lane" data-reveal style="--accent: var(--green); --i:3">
+            <div class="lane-tag"><span>Baseline</span><b>Accepted trace</b></div>
+            <div class="lane-step"><b>Expected calls</b><span>Sequence + arguments</span></div>
+            <div class="lane-step"><b>MCP execution</b><span>Deterministic tools</span></div>
+            <div class="lane-step"><b>Expected result</b><span>State + contract</span></div>
+          </div>
+          <div class="lane" data-reveal style="--accent: var(--purple); --i:4">
+            <div class="lane-tag"><span>Observed</span><b>Model trace</b></div>
+            <div class="lane-step"><b>Observed calls</b><span>Sequence + arguments</span></div>
+            <div class="lane-step"><b>MCP execution</b><span>Same tool surface</span></div>
+            <div class="lane-step"><b>Actual result</b><span>State + response</span></div>
+          </div>
+          <div class="verdict-bar" data-reveal style="--i:5">
+            <span class="glyph" style="--accent: var(--orange)"><svg class="icon" aria-hidden="true"><use href="#i-search"></use></svg></span>
+            <div>
+              <strong>Compare behavior, not prose quality</strong>
+              <span>Tool sequence, schema, final state, response contract.</span>
+            </div>
+            <span class="verdict-switch" role="group" aria-label="Evaluator verdict">
+              <span class="vs-seg vs-pass"><svg class="icon" aria-hidden="true"><use href="#i-check"></use></svg>Pass</span>
+              <span class="vs-seg vs-fail"><svg class="icon" aria-hidden="true"><use href="#i-x"></use></svg>Fail</span>
+            </span>
+          </div>
+        </div>
+
+        <div>
+          <div class="reasons">
+            <div class="reason" data-reveal style="--accent: var(--orange); --i:6">
+              <span class="glyph"><svg class="icon" aria-hidden="true"><use href="#i-alert"></use></svg></span>
+              <div><strong>Why this matters</strong><p>A polished final answer can still hide the wrong tool path.</p></div>
+            </div>
+            <div class="reason" data-reveal style="--accent: var(--green); --i:7">
+              <span class="glyph"><svg class="icon" aria-hidden="true"><use href="#i-replay"></use></svg></span>
+              <div><strong>Evaluator replay</strong><p>Captured provider responses can be scored again without a new model call.</p></div>
+            </div>
+            <div class="reason" data-reveal style="--accent: var(--blue); --i:8">
+              <span class="glyph"><svg class="icon" aria-hidden="true"><use href="#i-users"></use></svg></span>
+              <div><strong>Client proof</strong><p>Quarkus and Strands are smoke tests; the evaluator remains the benchmark.</p></div>
+            </div>
+          </div>
+          <p class="callout" data-reveal style="--i:9">
+            <b>Replay modes are different:</b> mitmweb Replay sends a real upstream HTTP request. Evaluator replay can re-score cached evidence offline.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 04 DEMO 1 ================= -->
+  <section class="chapter" id="one-tool" data-index="04" aria-labelledby="t-one-tool"
+           style="--accent: var(--green); --accent-2: var(--teal);">
+    <p class="rail" aria-hidden="true">Tool-Calling Consistency Lab</p>
+    <div class="chapter-inner">
+      <p class="kicker" data-reveal style="--i:0">Demo 1</p>
+      <h2 class="title" id="t-one-tool" data-reveal style="--i:1">
+        Exact spec requests should use <span class="grad">exactly one tool</span>
+      </h2>
+      <p class="lede" data-reveal style="--i:2">
+        The accepted trace is <span class="mono">get_instance_spec</span> only. Pricing may appear in text only if it came from the spec payload.
+      </p>
+
+      <div class="task" data-reveal style="--i:3">
+        <div><span>Task</span><strong class="mono">compute.single.spec.001</strong></div>
+        <div><span>Prompt</span><strong class="q">What are the exact specs for p5.48xlarge?</strong></div>
+      </div>
+
+      <div class="flow" aria-label="Expected one-tool flow">
+        <div class="flow-node" data-reveal style="--accent: var(--blue); --i:4">
+          <span class="glyph"><svg class="icon" aria-hidden="true"><use href="#i-message"></use></svg></span>
+          <strong>User asks specs</strong>
+          <span class="meta">Natural language</span>
+        </div>
+        <div class="conn short" data-reveal style="--i:5; --accent: var(--blue)" aria-hidden="true">
+          <svg viewBox="0 0 58 70" preserveAspectRatio="none" role="presentation">
+            <path class="track" d="M0 35 L 58 35"/><path class="pulse" d="M0 35 L 58 35"/>
+            <polygon class="head" points="58,35 50,30 50,40"/>
+          </svg>
+        </div>
+        <div class="flow-node key" data-reveal style="--accent: var(--orange); --i:6">
+          <span class="glyph"><svg class="icon" aria-hidden="true"><use href="#i-tool"></use></svg></span>
+          <strong class="mono">get_instance_spec</strong>
+          <span class="meta">Exactly once</span>
+        </div>
+        <div class="conn short" data-reveal style="--i:7; --accent: var(--orange)" aria-hidden="true">
+          <svg viewBox="0 0 58 70" preserveAspectRatio="none" role="presentation">
+            <path class="track" d="M0 35 L 58 35"/><path class="pulse" d="M0 35 L 58 35"/>
+            <polygon class="head" points="58,35 50,30 50,40"/>
+          </svg>
+        </div>
+        <div class="flow-node" data-reveal style="--accent: var(--green); --i:8">
+          <span class="glyph"><svg class="icon" aria-hidden="true"><use href="#i-braces"></use></svg></span>
+          <strong>Final JSON</strong>
+          <span class="meta mono">responseType: final_answer</span>
+        </div>
+      </div>
+
+      <div class="assert-row" data-reveal style="--i:9">
+        <span class="tag" style="--accent: var(--green)">
+          <svg class="icon" aria-hidden="true"><use href="#i-slash"></use></svg>No get_instance_price call
+        </span>
+        <span class="tag ghost" style="--accent: var(--teal)">One tool, one turn</span>
+        <span class="tag ghost" style="--accent: var(--blue)">Schema-valid arguments</span>
+      </div>
+
+      <div class="results">
+        <div class="result" data-reveal style="--accent: var(--green); --i:10">
+          <div class="result-head"><strong>Evaluator</strong><span class="tag" style="--accent: var(--green)"><svg class="icon" aria-hidden="true"><use href="#i-check"></use></svg>Pass</span></div>
+          <p>Expected and observed traces contain exactly <span class="mono">get_instance_spec</span>.</p>
+        </div>
+        <div class="result" data-reveal style="--accent: var(--blue); --i:11">
+          <div class="result-head"><strong>Quarkus client</strong><span class="tag" style="--accent: var(--green)"><svg class="icon" aria-hidden="true"><use href="#i-check"></use></svg>Pass</span></div>
+          <p>Same MCP server, same contract prompt, production-shaped Java client.</p>
+        </div>
+        <div class="result" data-reveal style="--accent: var(--purple); --i:12">
+          <div class="result-head"><strong>Strands client</strong><span class="tag" style="--accent: var(--green)"><svg class="icon" aria-hidden="true"><use href="#i-check"></use></svg>Pass</span></div>
+          <p>Same scenario from Python; streaming delivery does not change what matters.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 05 DEMO 2 ================= -->
+  <section class="chapter" id="no-tool" data-index="05" aria-labelledby="t-no-tool"
+           style="--accent: var(--teal); --accent-2: var(--green);">
+    <p class="rail" aria-hidden="true">Tool-Calling Consistency Lab</p>
+    <div class="chapter-inner">
+      <p class="kicker" data-reveal style="--i:0">Demo 2</p>
+      <h2 class="title" id="t-no-tool" data-reveal style="--i:1">
+        No-tool requests reveal the <span class="grad">customization delta</span>
+      </h2>
+      <p class="lede" data-reveal style="--i:2">
+        Both paths correctly call no tools. Only the customized model returns the required JSON response.
+      </p>
+
+      <div class="split">
+        <article class="case" data-reveal style="--accent: var(--red); --i:3">
+          <div class="case-head">
+            <span class="who"><svg class="icon" aria-hidden="true"><use href="#i-alert"></use></svg>Baseline Qwen</span>
+            <span class="tag ghost" style="--accent: var(--red)">Contract miss</span>
+          </div>
+          <p class="shout">Prose <span class="of">instead of JSON</span></p>
+          <p>The model abstains from tools, then answers in prose instead of the required JSON response.</p>
+          <div class="out mono" aria-label="Baseline output sample">
+            <span class="c">// final response</span><br>
+            <span class="p">I cannot find a relevant infrastructure tool for that request&#8230;</span>
+          </div>
+        </article>
+
+        <article class="case" data-reveal style="--accent: var(--green); --i:4">
+          <div class="case-head">
+            <span class="who"><svg class="icon" aria-hidden="true"><use href="#i-check"></use></svg>Customized Qwen</span>
+            <span class="tag" style="--accent: var(--green)">Contract met</span>
+          </div>
+          <p class="shout">Valid JSON <span class="of">same abstention</span></p>
+          <p>SFT makes the no-tool response format native while keeping the same abstention decision.</p>
+          <div class="out mono" aria-label="Customized output sample">
+            {<br>
+            &nbsp;&nbsp;<span class="k">"responseType"</span>: <span class="s">"no_tool_applicable"</span>,<br>
+            &nbsp;&nbsp;<span class="k">"claims"</span>: [],<br>
+            &nbsp;&nbsp;<span class="k">"missingFields"</span>: [<span class="c">&#8230;</span>]<br>
+            }
+          </div>
+        </article>
+      </div>
+
+      <div class="facts" data-reveal style="--i:5">
+        <span class="tag" style="--accent: var(--green)">No tool calls</span>
+        <span class="tag" style="--accent: var(--blue)">Same task</span>
+        <span class="tag" style="--accent: var(--orange)">Different response</span>
+        <span class="spacer"></span>
+        <span class="conclusion">Customization is justified when behavior resists prompt and runtime fixes.</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 06 REMEDIATION ================= -->
+  <section class="chapter" id="remediation" data-index="06" aria-labelledby="t-remediation"
+           style="--accent: var(--blue); --accent-2: var(--orange);">
+    <p class="rail" aria-hidden="true">Tool-Calling Consistency Lab</p>
+    <div class="chapter-inner">
+      <p class="kicker" data-reveal style="--i:0">Remediation ladder</p>
+      <h2 class="title" id="t-remediation" data-reveal style="--i:1; --accent-2: var(--teal)">
+        Do not force SFT; <span class="grad">earn it</span>
+      </h2>
+      <p class="lede" data-reveal style="--i:2">
+        Use the cheapest control that makes the failure stop recurring. Customization is one rung, not the first move.
+      </p>
+
+      <div class="ladder">
+        <article class="rung" data-reveal style="--accent: var(--teal); --i:3">
+          <span class="rung-n">01</span>
+          <h3>Runtime config</h3>
+          <p>Disable thinking leakage, normalize provider quirks, and make the contract shape stable.</p>
+          <p class="when"><svg class="icon" aria-hidden="true"><use href="#i-cpu"></use></svg><span>Start with repeatable infrastructure behavior.</span></p>
+        </article>
+        <article class="rung" data-reveal style="--accent: var(--green); --i:4">
+          <span class="rung-n">02</span>
+          <h3>Prompt + schema</h3>
+          <p>Clarify when tools apply, when to stop, and what the required JSON response must contain.</p>
+          <p class="when"><svg class="icon" aria-hidden="true"><use href="#i-braces"></use></svg><span>Use explicit contracts before model changes.</span></p>
+        </article>
+        <article class="rung" data-reveal style="--accent: var(--blue); --i:5">
+          <span class="rung-n">03</span>
+          <h3>Guardrails</h3>
+          <p>Put deterministic policy in code: preconditions, idempotency, retries, and audits.</p>
+          <p class="when"><svg class="icon" aria-hidden="true"><use href="#i-shield"></use></svg><span>Use code for behavior that must never drift.</span></p>
+        </article>
+        <article class="rung" data-reveal style="--accent: var(--orange); --i:6">
+          <span class="rung-n">04</span>
+          <h3>SFT</h3>
+          <p>Use when behavior should travel with an open-weight model and resists prompt or guardrail fixes.</p>
+          <p class="when"><svg class="icon" aria-hidden="true"><use href="#i-zap"></use></svg><span>Customize only after the evidence supports it.</span></p>
+        </article>
+      </div>
+
+      <p class="banner" data-reveal style="--accent: var(--orange); --i:7">
+        <svg class="icon" aria-hidden="true"><use href="#i-layers"></use></svg>
+        <span>The honest result is valuable: some failures need prompts, some need code, and only some justify model customization.</span>
+      </p>
+    </div>
+  </section>
+
+  <!-- ================= 07 TAKEAWAYS ================= -->
+  <section class="chapter" id="takeaways" data-index="07" aria-labelledby="t-takeaways"
+           style="--accent: var(--orange); --accent-2: var(--teal);">
+    <p class="rail" aria-hidden="true">Tool-Calling Consistency Lab</p>
+    <div class="chapter-inner">
+      <p class="kicker" data-reveal style="--i:0">Takeaways</p>
+      <h2 class="title" id="t-takeaways" data-reveal style="--i:1; --accent-2: var(--ember)">
+        What to take back to <span class="grad">your own agents</span>
+      </h2>
+      <p class="lede" data-reveal style="--i:2">
+        Reliable tool use comes from measured behavior, shared contracts, and deterministic controls around the model.
+      </p>
+
+      <div class="takes">
+        <article class="take" data-reveal style="--accent: var(--blue); --i:3">
+          <span class="glyph"><svg class="icon" aria-hidden="true"><use href="#i-search"></use></svg></span>
+          <h3>Measure traces</h3>
+          <p>Capture requests, tool calls, tool results, and final responses before debating fixes.</p>
+          <p class="action">Make accepted behavior explicit.</p>
+        </article>
+        <article class="take" data-reveal style="--accent: var(--green); --i:4">
+          <span class="glyph"><svg class="icon" aria-hidden="true"><use href="#i-replay"></use></svg></span>
+          <h3>Replay failures</h3>
+          <p>Turn surprising behavior into reviewable evidence and repeatable regression gates.</p>
+          <p class="action">Preserve the evidence, not just the anecdote.</p>
+        </article>
+        <article class="take" data-reveal style="--accent: var(--orange); --i:5">
+          <span class="glyph"><svg class="icon" aria-hidden="true"><use href="#i-shield"></use></svg></span>
+          <h3>Use the ladder</h3>
+          <p>Start with configuration, prompts, schemas, and guardrails. Use SFT only when behavior must travel with the model.</p>
+          <p class="action">Fix each failure at the lowest durable layer.</p>
+        </article>
+      </div>
+
+      <p class="banner" data-reveal style="--accent: var(--green); --i:6">
+        <svg class="icon" aria-hidden="true"><use href="#i-target"></use></svg>
+        <span>Source of truth: expected trace vs observed LLM trace.</span>
+      </p>
+    </div>
+  </section>
+
+  <!-- ================= 08 SOURCE ================= -->
+  <section class="chapter" id="source" data-index="08" aria-labelledby="t-source"
+           style="--accent: var(--teal); --accent-2: var(--blue);">
+    <p class="rail" aria-hidden="true">Tool-Calling Consistency Lab</p>
+    <div class="chapter-inner">
+      <p class="kicker" data-reveal style="--i:0">Source code</p>
+      <h2 class="title" id="t-source" data-reveal style="--i:1">
+        Replay the lab <span class="grad">locally</span>
+      </h2>
+      <p class="lede" data-reveal style="--i:2">
+        The public repository includes the evaluator, MCP server, production-shaped clients, demo harness, and training artifacts.
+      </p>
+
+      <div class="repo">
+        <div class="repo-list">
+          <div class="repo-item" data-reveal style="--accent: var(--green); --i:3"><span class="glyph"><svg class="icon" aria-hidden="true"><use href="#i-check"></use></svg></span><div><strong>Evaluator</strong><span>Accepted traces and scoring</span></div></div>
+          <div class="repo-item" data-reveal style="--accent: var(--orange); --i:4"><span class="glyph"><svg class="icon" aria-hidden="true"><use href="#i-server"></use></svg></span><div><strong>MCP server</strong><span>Shared tool surface</span></div></div>
+          <div class="repo-item" data-reveal style="--accent: var(--purple); --i:5"><span class="glyph"><svg class="icon" aria-hidden="true"><use href="#i-code"></use></svg></span><div><strong>Quarkus client</strong><span>Production-shaped Java path</span></div></div>
+          <div class="repo-item" data-reveal style="--accent: var(--blue); --i:6"><span class="glyph"><svg class="icon" aria-hidden="true"><use href="#i-branch"></use></svg></span><div><strong>Strands client</strong><span>Production-shaped Python path</span></div></div>
+          <div class="repo-item" data-reveal style="--accent: var(--teal); --i:7"><span class="glyph"><svg class="icon" aria-hidden="true"><use href="#i-terminal"></use></svg></span><div><strong>Demo harness</strong><span>Prompts, proxy capture, replay</span></div></div>
+          <div class="repo-item" data-reveal style="--accent: var(--yellow); --i:8"><span class="glyph"><svg class="icon" aria-hidden="true"><use href="#i-zap"></use></svg></span><div><strong>Training artifacts</strong><span>Customization data and results</span></div></div>
+        </div>
+
+        <div class="repo-panel" data-reveal style="--i:4">
+          <div class="qr">
+            <img id="qrImage" alt="QR code linking to github.com/murubhas/mcp-tool-consistency-lab"
+                 src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAoAAAAKAAQMAAAA2A1tgAAAABlBMVEX///8AAABVwtN+AAAACXBIWXMAAA7EAAAOxAGVKw4bAAAC2ElEQVR4nO3dMW7zMAyGYQUdPPYIPoqP1hwtR/ERMnoIwr9RSZGSbRRplP4o8n6bYuvxSIiSnZQIIYT8mUzSZr79PIic0iEPRJY4Ybjdc03pfTXxAggICAj46uAl3v6mhtzAz4wiblT5BI9x/AEICAgICPgMcBRR482rnhuDXj7r4FTAcAUQEBAQEPBXwLwamyTEDJ1zBQQEBAQE/E9g1T/UHPI0vREQEBAQEPC3QE+oepamBC6x6oUAAgICAgJKm7kY11y+vGKd45W7TmIAAgICAgL+ANzJoB0+H7TgnQEEBAQEBLwbrKpebvf54BAHKe5JiXb4NtZpgICAgICA/UDbkwotQ42BSxzkhKXZSW9eb3IBAgICAgI+Bjb7Wl9VTx/1tQBzZr00q1ZwCRAQEBAQsCtYne6zjSovgePuJpcDe0szQEBAQMBXBFMsRVK+CSFaviS2+9q6NN0un+MYEBAQEBCwF2hG0L3QzaUEVq81hZjeHkEHBAQEBAR8FKzieqht+pv1/pZY6Kw4ntcWICAgICBgF3DU391Yop62DIlz2jd7AQEBAQEBO4DeP8wLsPaLE2Mzvdrx+qhLICAgICAgYG/Qsqg+NptcleEDi+sXQEBAQMBXB83ICZ9vzR2+sTyqem71WpM9KgECAgICAvYHU+nwhapnByfWO0+mH4uy1+4DBAQEBAR8FBylTVXoxHee1vF12gUQEBAQELAruBkH57hB9V4eFT4Q4QEEBAQEBOwLTtJmbk6d621Xf5lXykcm2kUbICAgICBgV7CqftX/3lqGqLeDfNtGQxIQEBAQ8DXBUWvNKZ4Yn8rBiRCdE7J3EgMQEBAQEPB5YIoHJ6pT580aSzaPoAMCAgICAj4TTHpl8Wm6NNvIsTwAEBAQEBCwI+gxMKftEqYyR7TQ2Qruu4YkICAgICDgj8A2LegDOziRdTuPvu4fAgICAgIC9gEJIYT8ifwDxjSM1TuWb8sAAAAASUVORK5CYII=">
+          </div>
+          <h3>mcp-tool-consistency-lab</h3>
+          <p class="repo-url mono" id="repoUrl">github.com/murubhas/mcp-tool-consistency-lab</p>
+          <div class="repo-actions">
+            <a class="btn primary" href="https://github.com/murubhas/mcp-tool-consistency-lab" target="_blank" rel="noreferrer noopener">
+              <svg class="icon" aria-hidden="true"><use href="#i-external"></use></svg>Open repository
+            </a>
+            <button class="btn" id="copyRepo" type="button">
+              <svg class="icon" aria-hidden="true"><use href="#i-copy"></use></svg>Copy URL
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <p class="closing" data-reveal style="--i:9">
+        <b>Measure the path.</b> <span>Replay the evidence. Fix the lowest durable layer.</span>
+      </p>
+    </div>
+  </section>
+
+</main>
+
+<div class="present-bar" aria-label="Presentation controls">
+  <button class="icon-btn" id="prevSlide" type="button" aria-label="Previous slide" title="Previous (Left arrow)">
+    <svg class="icon" aria-hidden="true"><use href="#i-left"></use></svg>
+  </button>
+  <span class="counter" id="counter" aria-live="polite"><b>1</b> / 9</span>
+  <button class="icon-btn" id="nextSlide" type="button" aria-label="Next slide" title="Next (Right arrow or Space)">
+    <svg class="icon" aria-hidden="true"><use href="#i-right"></use></svg>
+  </button>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(() => {
+  'use strict';
+
+  const REPO = 'https://github.com/murubhas/mcp-tool-consistency-lab';
+  const body = document.body;
+  const root = document.documentElement;
+  const chapters = [...document.querySelectorAll('.chapter')];
+  const links = [...document.querySelectorAll('.chapter-link')];
+  const readBtn = document.getElementById('readMode');
+  const presentBtn = document.getElementById('presentMode');
+  const progressBar = document.getElementById('progressBar');
+  const counter = document.getElementById('counter');
+  const themeIcon = document.getElementById('themeIcon');
+  const themeToggle = document.getElementById('themeToggle');
+  const toast = document.getElementById('toast');
+
+  const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const isPresent = () => body.classList.contains('present-mode');
+
+  let current = Math.max(0, chapters.findIndex((c) => c.id === location.hash.slice(1)));
+  let toastTimer;
+
+  /* ---------- toast ---------- */
+  function announce(message) {
+    toast.textContent = message;
+    toast.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toast.classList.remove('show'), 1700);
+  }
+
+  /* ---------- present-mode autofit -----------------------------------
+     Every size in the stylesheet derives from --fs, so lowering --fs-fit
+     uniformly scales a slide down until it fits the viewport.
+
+     Measure .chapter-inner (natural content height) against the chapter's
+     content box - NOT chapter.scrollHeight, which would also include the
+     decorative numeral that deliberately bleeds past the bottom edge and
+     would make the loop shrink without ever converging.
+     ------------------------------------------------------------------ */
+  const FIT_FLOOR = 0.62;
+  const FIT_STEP = 0.035;
+
+  function fit(chapter, attempt = 0) {
+    chapter.style.removeProperty('--fs-fit');
+    chapter.classList.remove('overflowing');
+    if (!isPresent()) return;
+
+    const inner = chapter.querySelector('.chapter-inner');
+    if (!inner) return;
+
+    const avail = () => {
+      const cs = getComputedStyle(chapter);
+      return chapter.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
+    };
+
+    // layout not settled yet (hidden slide, fonts still loading, etc.)
+    if (avail() < 200) {
+      if (attempt < 6) requestAnimationFrame(() => fit(chapter, attempt + 1));
+      return;
+    }
+
+    let f = 1;
+    let guard = 0;
+    while (inner.getBoundingClientRect().height > avail() + 1 && f > FIT_FLOOR && guard++ < 20) {
+      f = Math.round((f - FIT_STEP) * 1000) / 1000;
+      chapter.style.setProperty('--fs-fit', f);
+    }
+
+    if (inner.getBoundingClientRect().height > avail() + 1) {
+      chapter.classList.add('overflowing');
+    }
+  }
+
+  function fitAll() {
+    if (!isPresent()) {
+      chapters.forEach((c) => {
+        c.style.removeProperty('--fs-fit');
+        c.classList.remove('overflowing');
+      });
+      return;
+    }
+    fit(chapters[current]);
+  }
+
+  /* ---------- navigation ---------- */
+  function setActive(index, syncHash = true) {
+    current = Math.min(Math.max(index, 0), chapters.length - 1);
+
+    chapters.forEach((c, i) => c.classList.toggle('active', i === current));
+    links.forEach((l, i) => {
+      l.classList.toggle('active', i === current);
+      l.setAttribute('aria-current', i === current ? 'true' : 'false');
+    });
+
+    progressBar.style.width = `${((current + 1) / chapters.length) * 100}%`;
+    counter.innerHTML = `<b>${current + 1}</b> / ${chapters.length}`;
+
+    if (syncHash) history.replaceState(null, '', `#${chapters[current].id}`);
+    if (isPresent()) {
+      const slide = chapters[current];
+      slide.scrollTop = 0;
+      // fit() is idempotent, so run it now (getBoundingClientRect flushes
+      // layout) and once more after paint, to cover late style/font work.
+      fit(slide);
+      requestAnimationFrame(() => fit(slide));
+    }
+  }
+
+  /* While we scroll programmatically, the scroll spy must not "correct"
+     the active chapter - otherwise a deep link like #remediation gets
+     rewritten to whatever chapter the animation passes on the way. */
+  let spyLockUntil = 0;
+  const lockSpy = (ms = 1000) => { spyLockUntil = performance.now() + ms; };
+  const spyLocked = () => performance.now() < spyLockUntil;
+
+  function go(index) {
+    const clamped = Math.min(Math.max(index, 0), chapters.length - 1);
+    setActive(clamped);
+    if (!isPresent()) {
+      lockSpy();
+      chapters[clamped].scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
+    }
+  }
+
+  function setMode(mode) {
+    const present = mode === 'present';
+    body.classList.toggle('present-mode', present);
+    readBtn.setAttribute('aria-pressed', String(!present));
+    presentBtn.setAttribute('aria-pressed', String(present));
+    setActive(current, false);
+    if (present) {
+      fitAll();
+      requestAnimationFrame(fitAll);
+    } else {
+      fitAll();
+      requestAnimationFrame(() => chapters[current].scrollIntoView({ block: 'start' }));
+    }
+  }
+
+  function setTheme(theme) {
+    root.dataset.theme = theme;
+    const dark = theme === 'dark';
+    themeIcon.setAttribute('href', dark ? '#i-sun' : '#i-moon');
+    themeToggle.setAttribute('aria-label', dark ? 'Use light theme' : 'Use dark theme');
+    try { localStorage.setItem('tool-lab-claude-theme', theme); } catch (_) { /* private mode */ }
+  }
+
+  /* ---------- wiring ---------- */
+  readBtn.addEventListener('click', () => setMode('read'));
+  presentBtn.addEventListener('click', () => setMode('present'));
+  links.forEach((link, i) => link.addEventListener('click', () => go(i)));
+  document.getElementById('prevSlide').addEventListener('click', () => go(current - 1));
+  document.getElementById('nextSlide').addEventListener('click', () => go(current + 1));
+  document.getElementById('printButton').addEventListener('click', () => window.print());
+  themeToggle.addEventListener('click', () => setTheme(root.dataset.theme === 'dark' ? 'light' : 'dark'));
+
+  document.getElementById('fullButton').addEventListener('click', async () => {
+    try {
+      if (!document.fullscreenElement) await root.requestFullscreen();
+      else await document.exitFullscreen();
+    } catch (_) {
+      announce('Full screen is unavailable in this browser');
+    }
+  });
+
+  document.getElementById('copyRepo').addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(REPO);
+      announce('Repository URL copied');
+    } catch (_) {
+      const area = document.createElement('textarea');
+      area.value = REPO;
+      area.style.cssText = 'position:fixed;opacity:0';
+      document.body.appendChild(area);
+      area.select();
+      try { document.execCommand('copy'); announce('Repository URL copied'); }
+      catch (_e) { announce('Copy failed - select the URL manually'); }
+      area.remove();
+    }
+  });
+
+  /* ---------- keyboard ---------- */
+  document.addEventListener('keydown', (event) => {
+    if (event.metaKey || event.ctrlKey || event.altKey) return;
+    const tag = event.target.tagName;
+    if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+
+    const key = event.key;
+
+    if (key === 't' || key === 'T') {
+      setTheme(root.dataset.theme === 'dark' ? 'light' : 'dark');
+      return;
+    }
+    if (key === 'p' || key === 'P') {
+      event.preventDefault();
+      setMode(isPresent() ? 'read' : 'present');
+      return;
+    }
+    if (key === 'f' || key === 'F') {
+      event.preventDefault();
+      document.getElementById('fullButton').click();
+      return;
+    }
+    if (key === 'Escape' && isPresent()) {
+      setMode('read');
+      return;
+    }
+    if (!isPresent()) return;
+
+    if (key === 'ArrowRight' || key === 'PageDown' || key === ' ') {
+      event.preventDefault();
+      go(current + 1);
+    } else if (key === 'ArrowLeft' || key === 'PageUp') {
+      event.preventDefault();
+      go(current - 1);
+    } else if (key === 'Home') {
+      event.preventDefault();
+      go(0);
+    } else if (key === 'End') {
+      event.preventDefault();
+      go(chapters.length - 1);
+    }
+  });
+
+  /* ---------- scroll spy (read mode) ---------- */
+  const spy = new IntersectionObserver((entries) => {
+    if (isPresent() || spyLocked()) return;
+    const visible = entries
+      .filter((e) => e.isIntersecting)
+      .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+    if (visible) setActive(chapters.indexOf(visible.target));
+  }, { rootMargin: '-24% 0px -54% 0px', threshold: [0, 0.15, 0.45] });
+  chapters.forEach((c) => spy.observe(c));
+
+  /* ---------- staggered reveal ---------- */
+  const revealTargets = document.querySelectorAll('[data-reveal]');
+  if (reduceMotion) {
+    revealTargets.forEach((el) => el.classList.add('in'));
+  } else {
+    const reveal = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('in');
+          reveal.unobserve(entry.target);
+        }
+      });
+    }, { rootMargin: '0px 0px -8% 0px', threshold: 0.06 });
+    revealTargets.forEach((el) => reveal.observe(el));
+  }
+
+  /* ---------- misc ---------- */
+  window.addEventListener('hashchange', () => {
+    const index = chapters.findIndex((c) => c.id === location.hash.slice(1));
+    if (index >= 0) go(index);
+  });
+
+  // release the lock early where scrollend exists; the timeout is the fallback
+  window.addEventListener('scrollend', () => { spyLockUntil = 0; });
+
+  let resizeTimer;
+  window.addEventListener('resize', () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(fitAll, 130);
+  });
+
+  window.addEventListener('beforeprint', () => {
+    revealTargets.forEach((el) => el.classList.add('in'));
+  });
+
+  // webfont metrics can change content height after first paint
+  if (document.fonts && document.fonts.ready) {
+    document.fonts.ready.then(fitAll).catch(() => {});
+  }
+
+  let stored = 'dark';
+  try { stored = localStorage.getItem('tool-lab-claude-theme') || 'dark'; } catch (_) { /* ignore */ }
+  setTheme(stored);
+
+  if (new URLSearchParams(location.search).has('present')) setMode('present');
+  setActive(current, false);
+
+  // Deep link on load: scroll there ourselves, instantly, with the spy held
+  // off. `behavior: auto` overrides html { scroll-behavior: smooth }.
+  if (current > 0 && !isPresent()) {
+    lockSpy(1400);
+    const target = chapters[current];
+    target.scrollIntoView({ behavior: 'auto', block: 'start' });
+    // re-assert after layout settles (late fonts can shift offsets)
+    requestAnimationFrame(() => target.scrollIntoView({ behavior: 'auto', block: 'start' }));
+  }
+})();
+</script>
+</body>
+</html>

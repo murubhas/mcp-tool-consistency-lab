@@ -2,7 +2,16 @@
 
 A deterministic lab for capturing, replaying, and regression-gating multi-tool agent failures using the [Model Context Protocol (MCP)](https://modelcontextprotocol.io/).
 
-Large language models are increasingly reliable at single tool calls. But when a task requires multiple tools — choosing the right ones, calling them in the right order, knowing when to stop — models make visible, reproducible mistakes. The [Berkeley Function-Calling Leaderboard (BFCL)](https://gorilla.cs.berkeley.edu/leaderboard.html) shows this gap clearly: top models score well on simple single-turn calls, but multi-tool, parallel, and multi-turn categories reveal persistent reliability gaps. This lab captures those failures, replays them without live model calls, and scores behavior against accepted traces.
+Large language models are increasingly reliable at single tool calls. But when a task requires multiple tools — choosing the right ones, calling them in the right order, knowing when to stop — models make visible, reproducible mistakes. The [Berkeley Function-Calling Leaderboard (BFCL)](https://gorilla.cs.berkeley.edu/leaderboard.html) shows this gap clearly: top models score well on simple single-turn calls, but multi-tool, parallel, and multi-turn categories reveal persistent reliability gaps. This lab captures those failures, lets the evaluator re-score captured provider evidence without a new model call, and compares observed behavior against accepted traces.
+
+Open the self-contained interactive story:
+
+[Open the rendered HTML5 presentation](https://murubhas.github.io/mcp-tool-consistency-lab/story/tool-calling-consistency-lab.html)
+
+The presentation supports Read and Present modes, dark and light themes,
+full-screen navigation, and printing. Its styles, scripts, icons, and QR code are
+embedded in one HTML file, so it can also be opened locally without a web
+server.
 
 ## Architecture
 
@@ -108,6 +117,7 @@ mcp-tool-consistency-lab/
 ├── clients/
 │   ├── quarkus-agent-client/   Java AI agent using Quarkus LangChain4j (Qwen by default, optional Bedrock Sonnet)
 │   └── strands-agent-client/   Python AI agent using Strands Agents (Qwen by default, optional Bedrock Sonnet)
+├── story/                      Self-contained HTML5 presentation
 └── training/                   SFT dataset generator for no-tool envelope failures
 ```
 
